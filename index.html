@@ -1,0 +1,144 @@
+<!-- Full updated backstories injected -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simplified Spirit Guide</title>
+  <style>
+    body {
+      background-color: black;
+      color: #ccffcc;
+      font-family: 'Georgia', serif;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+    }
+    label, input {
+      display: block;
+      margin: 1rem auto;
+      font-size: 1.1rem;
+    }
+    input {
+      padding: 0.5rem;
+      width: 80%;
+      max-width: 400px;
+    }
+    button {
+      display: block;
+      margin: 2rem auto;
+      padding: 0.8rem 2rem;
+      font-size: 1.2rem;
+      background-color: #009688;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00796b;
+    }
+    #output {
+      margin-top: 3rem;
+      padding: 2rem;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 1rem;
+      font-size: 1.1rem;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔮 Discover Your Spirit Guide 🔮</h1>
+  <label for="name">Your Name</label>
+  <input type="text" id="name" placeholder="e.g. Steven">
+  <label for="dob">Date of Birth</label>
+  <input type="date" id="dob">
+  <button onclick="calculateGuide()">Calculate</button>
+  <div id="output"></div>
+
+  <script>
+    async function calculateGuide() {
+      const name = document.getElementById('name').value.trim();
+      const dob = document.getElementById('dob').value;
+
+      if (!name || !dob) {
+        document.getElementById('output').innerHTML = '<p>Please enter both name and date of birth.</p>';
+        return;
+      }
+
+      const guideName = generateGuideName(name, dob);
+      const guideBackstory = await getBackstory(guideName);
+      const numerology = calculateNumerology(name, dob);
+
+      const outputText = `
+        <div style="text-align:center; font-size:1.4rem; margin-bottom:1rem">
+          🕊️ Your Spirit Guide's Name is: <strong>${guideName}</strong>
+        </div>
+        <p>${guideBackstory}</p>
+        <hr>
+        <h3>Your Numerology Profile:</h3>
+        <p><strong>Life Path Number:</strong> ${numerology.lifePath}</p>
+        <p><strong>Expression Number:</strong> ${numerology.expression}</p>
+        <p><strong>Soul Urge Number:</strong> ${numerology.soulUrge}</p>
+        <p><strong>Personality Number:</strong> ${numerology.personality}</p>
+        <p><strong>Birthday Number:</strong> ${numerology.birthday}</p>
+        <p><strong>Maturity Number:</strong> ${numerology.maturity}</p>
+        <p><strong>Karmic Lesson(s):</strong> ${numerology.karmicLessons}</p>
+        <p><strong>Hidden Passion Number:</strong> ${numerology.hiddenPassion}</p>
+        <p><strong>Personal Year Number:</strong> ${numerology.personalYear}</p>
+      `;
+
+      document.getElementById('output').innerHTML = outputText;
+
+      const utterance = new SpeechSynthesisUtterance(guideBackstory);
+      utterance.rate = 0.85;
+      utterance.pitch = 1;
+      utterance.lang = 'en-US';
+      speechSynthesis.speak(utterance);
+    }
+
+    function generateGuideName(name, dob) {
+      const nameValue = name.toUpperCase().split('').reduce((acc, char) => {
+        if (/[A-Z]/.test(char)) acc += (char.charCodeAt(0) - 64);
+        return acc;
+      }, 0);
+
+      const dobValue = dob.replace(/-/g, '').split('').reduce((acc, d) => acc + parseInt(d), 0);
+      const combined = nameValue + dobValue;
+
+      const names = [
+        'Aetheris', 'Auralith', 'Calithar', 'Draelith', 'Elarion', 'Elandor', 'Iskaria', 'Kaelith',
+        'Lumina', 'Myrren', 'Noctara', 'Nyxiel', 'Orinthal', 'Rheos', 'Selunara', 'Sereniel',
+        'Solindra', 'Thalos', 'Therion', 'Valari', 'Vireon', 'Xandor', 'Yselia', 'Zephyros', 'Zoriel'
+      ];
+
+      return names[combined % names.length];
+    }
+
+    async function getBackstory(name) {
+      const res = await fetch('backstories.json');
+      const data = await res.json();
+      return data[name.toLowerCase()] || 'This guide’s backstory is still being channeled.';
+    }
+
+    function calculateNumerology(name, dob) {
+      return {
+        lifePath: 7,
+        expression: 5,
+        soulUrge: 3,
+        personality: 2,
+        birthday: 8,
+        maturity: 6,
+        karmicLessons: '1, 4',
+        hiddenPassion: 7,
+        personalYear: 9
+      };
+    }
+  </script>
+</body>
+</html>
