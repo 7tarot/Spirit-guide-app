@@ -96,24 +96,35 @@
 
     setInterval(drawMatrix, 33);
 
-    // Guide logic
+    // Guide logic with debug logging
     async function generateGuide() {
       const name = document.getElementById('name').value.trim().toLowerCase();
       const dob = document.getElementById('dob').value;
-      if (!name || !dob) return alert('Please enter your name and date of birth');
+      console.log("Calculate clicked. Name:", name, "DOB:", dob);
 
-      const response = await fetch('https://7tarot.netlify.app/backstories_full_fixed.json');
-      const backstories = await response.json();
+      if (!name || !dob) {
+        alert('Please enter your name and date of birth');
+        return;
+      }
 
-      // Simple hash to pick a guide
-      const total = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + new Date(dob).getTime();
-      const keys = Object.keys(backstories);
-      const guideKey = keys[total % keys.length];
+      try {
+        const response = await fetch('https://7tarot.netlify.app/backstories_full_fixed.json');
+        const backstories = await response.json();
+        console.log("Backstories loaded:", backstories);
 
-      const guideName = guideKey.charAt(0).toUpperCase() + guideKey.slice(1);
-      const story = backstories[guideKey];
+        const total = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + new Date(dob).getTime();
+        const keys = Object.keys(backstories);
+        const guideKey = keys[total % keys.length];
+        console.log("Selected guide key:", guideKey);
 
-      document.getElementById('result').innerText = `🕊️ Your Spirit Guide's Name is: ${guideName}\n\n${story}`;
+        const guideName = guideKey.charAt(0).toUpperCase() + guideKey.slice(1);
+        const story = backstories[guideKey];
+
+        document.getElementById('result').innerText = `🕊️ Your Spirit Guide's Name is: ${guideName}\n\n${story}`;
+      } catch (err) {
+        console.error("Something went wrong fetching or parsing the guide:", err);
+        alert("Sorry — something went wrong loading your spirit guide.");
+      }
     }
   </script>
 </body>
