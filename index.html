@@ -1,143 +1,119 @@
-<!-- Full updated backstories injected -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simplified Spirit Guide</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spirit Guide App</title>
   <style>
-    body {
-      background-color: black;
-      color: #ccffcc;
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
       font-family: 'Georgia', serif;
+      color: #00ffcc;
+      background: black;
+      overflow: hidden;
+    }
+
+    canvas#matrix {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
       padding: 2rem;
-    }
-    h1 {
+      max-width: 600px;
+      margin: auto;
       text-align: center;
-      font-size: 2rem;
     }
-    label, input {
-      display: block;
-      margin: 1rem auto;
-      font-size: 1.1rem;
-    }
-    input {
-      padding: 0.5rem;
-      width: 80%;
-      max-width: 400px;
-    }
-    button {
-      display: block;
-      margin: 2rem auto;
-      padding: 0.8rem 2rem;
-      font-size: 1.2rem;
-      background-color: #009688;
-      color: white;
+
+    input, button {
+      padding: 0.7rem;
+      font-size: 1rem;
+      margin: 0.5rem;
+      border-radius: 5px;
       border: none;
+    }
+
+    button {
+      background-color: #00ffcc;
+      color: black;
+      font-weight: bold;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #00796b;
-    }
-    #output {
-      margin-top: 3rem;
-      padding: 2rem;
-      background-color: rgba(0, 0, 0, 0.7);
-      border-radius: 1rem;
-      font-size: 1.1rem;
-      max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 1.6;
+
+    #result {
+      margin-top: 2rem;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h1>🔮 Discover Your Spirit Guide 🔮</h1>
-  <label for="name">Your Name</label>
-  <input type="text" id="name" placeholder="e.g. Steven">
-  <label for="dob">Date of Birth</label>
-  <input type="date" id="dob">
-  <button onclick="calculateGuide()">Calculate</button>
-  <div id="output"></div>
+  <canvas id="matrix"></canvas>
+  <div class="app">
+    <h1>🧙‍♂️ Spirit Guide Generator</h1>
+    <input type="text" id="name" placeholder="Enter your name" />
+    <input type="date" id="dob" />
+    <button onclick="generateGuide()">Calculate</button>
+    <div id="result"></div>
+  </div>
 
   <script>
-    async function calculateGuide() {
-      const name = document.getElementById('name').value.trim();
-      const dob = document.getElementById('dob').value;
+    // Matrix rain background
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
 
-      if (!name || !dob) {
-        document.getElementById('output').innerHTML = '<p>Please enter both name and date of birth.</p>';
-        return;
+    const chars = "アァカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    function drawMatrix() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#00ffcc";
+      ctx.font = fontSize + "px monospace";
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
       }
-
-      const guideName = generateGuideName(name, dob);
-      const guideBackstory = await getBackstory(guideName);
-      const numerology = calculateNumerology(name, dob);
-
-      const outputText = `
-        <div style="text-align:center; font-size:1.4rem; margin-bottom:1rem">
-          🕊️ Your Spirit Guide's Name is: <strong>${guideName}</strong>
-        </div>
-        <p>${guideBackstory}</p>
-        <hr>
-        <h3>Your Numerology Profile:</h3>
-        <p><strong>Life Path Number:</strong> ${numerology.lifePath}</p>
-        <p><strong>Expression Number:</strong> ${numerology.expression}</p>
-        <p><strong>Soul Urge Number:</strong> ${numerology.soulUrge}</p>
-        <p><strong>Personality Number:</strong> ${numerology.personality}</p>
-        <p><strong>Birthday Number:</strong> ${numerology.birthday}</p>
-        <p><strong>Maturity Number:</strong> ${numerology.maturity}</p>
-        <p><strong>Karmic Lesson(s):</strong> ${numerology.karmicLessons}</p>
-        <p><strong>Hidden Passion Number:</strong> ${numerology.hiddenPassion}</p>
-        <p><strong>Personal Year Number:</strong> ${numerology.personalYear}</p>
-      `;
-
-      document.getElementById('output').innerHTML = outputText;
-
-      const utterance = new SpeechSynthesisUtterance(guideBackstory);
-      utterance.rate = 0.85;
-      utterance.pitch = 1;
-      utterance.lang = 'en-US';
-      speechSynthesis.speak(utterance);
     }
 
-    function generateGuideName(name, dob) {
-      const nameValue = name.toUpperCase().split('').reduce((acc, char) => {
-        if (/[A-Z]/.test(char)) acc += (char.charCodeAt(0) - 64);
-        return acc;
-      }, 0);
+    setInterval(drawMatrix, 33);
 
-      const dobValue = dob.replace(/-/g, '').split('').reduce((acc, d) => acc + parseInt(d), 0);
-      const combined = nameValue + dobValue;
+    // Guide logic
+    async function generateGuide() {
+      const name = document.getElementById('name').value.trim().toLowerCase();
+      const dob = document.getElementById('dob').value;
+      if (!name || !dob) return alert('Please enter your name and date of birth');
 
-      const names = [
-        'Aetheris', 'Auralith', 'Calithar', 'Draelith', 'Elarion', 'Elandor', 'Iskaria', 'Kaelith',
-        'Lumina', 'Myrren', 'Noctara', 'Nyxiel', 'Orinthal', 'Rheos', 'Selunara', 'Sereniel',
-        'Solindra', 'Thalos', 'Therion', 'Valari', 'Vireon', 'Xandor', 'Yselia', 'Zephyros', 'Zoriel'
-      ];
+      const response = await fetch('https://7tarot.netlify.app/backstories_full_fixed.json');
+      const backstories = await response.json();
 
-      return names[combined % names.length];
-    }
+      // Simple hash to pick a guide
+      const total = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + new Date(dob).getTime();
+      const keys = Object.keys(backstories);
+      const guideKey = keys[total % keys.length];
 
-    async function getBackstory(name) {
-      const res = await fetch('backstories.json');
-      const data = await res.json();
-      return data[name.toLowerCase()] || 'This guide’s backstory is still being channeled.';
-    }
+      const guideName = guideKey.charAt(0).toUpperCase() + guideKey.slice(1);
+      const story = backstories[guideKey];
 
-    function calculateNumerology(name, dob) {
-      return {
-        lifePath: 7,
-        expression: 5,
-        soulUrge: 3,
-        personality: 2,
-        birthday: 8,
-        maturity: 6,
-        karmicLessons: '1, 4',
-        hiddenPassion: 7,
-        personalYear: 9
-      };
+      document.getElementById('result').innerText = `🕊️ Your Spirit Guide's Name is: ${guideName}\n\n${story}`;
     }
   </script>
 </body>
