@@ -11,7 +11,7 @@
   <main class="container">
     <header class="header">
       <h1>Spirit Guide App</h1>
-      <p class="tag">Deterministic • Full Numerology Chart • Private</p>
+      <p class="tag">Deterministic • Full Numerology Chart • Tarot & Compatibility</p>
     </header>
 
     <section id="formSection" class="card">
@@ -33,8 +33,7 @@
         <button class="btn ghost" type="button" id="demoBtn">Demo</button>
       </form>
       <p class="hint">
-        Uses Life Path, Expression/Destiny, Soul Urge, Personality, Birthday, Maturity, Karmic Debts & Lessons. 
-        <strong>Deterministic:</strong> same inputs → same guide, regardless of name capitalisation or extra spaces.
+        Deterministic (case/spacing-proof) • Full chart • Narration • Saved locally (private).
       </p>
     </section>
 
@@ -77,7 +76,7 @@
         <h3>Your Numerology Chart</h3>
         <div id="chartGrid" class="num-grid"></div>
         <details style="margin-top:10px;">
-          <summary>What do these mean?</summary>
+          <summary>What do these mean? (compatibility, Tarot & zodiac)</summary>
           <div id="chartExplain"></div>
         </details>
       </section>
@@ -94,7 +93,7 @@
   </main>
 
   <script>
-    // ---------- Utilities ----------
+    // ---------- Numerology + Determinism ----------
     const VOWELS = new Set(['A','E','I','O','U']);
     const LETTER_VAL = {A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,I:9,J:1,K:2,L:3,M:4,N:5,O:6,P:7,Q:8,R:9,S:1,T:2,U:3,V:4,W:5,X:6,Y:7,Z:8};
     function djb2Hash(str){ let h=5381; for(let i=0;i<str.length;i++){ h=((h<<5)+h) ^ str.charCodeAt(i);} return h>>>0; }
@@ -108,22 +107,13 @@
       return reduceNum(yR + mR + dR);
     }
     function birthdayNumber(d){ return reduceNum(d.getDate()); }
-    function normalizeName(raw){
-      // Trim, collapse multiple spaces, uppercase for hashing & numerology to ensure determinism
-      const collapsed = (raw||'').trim().replace(/\s+/g,' ');
-      return { display: collapsed, normUpper: collapsed.toUpperCase() };
-    }
+    function normalizeName(raw){ const collapsed=(raw||'').trim().replace(/\s+/g,' '); return {display:collapsed, normUpper:collapsed.toUpperCase()}; }
     function isVowelLike(ch, prev, next){
       if (VOWELS.has(ch)) return true;
-      if (ch==='Y'){
-        const pV = prev && VOWELS.has(prev);
-        const nV = next && VOWELS.has(next);
-        return (!pV && !nV);
-      }
+      if (ch==='Y'){ const pV = prev && VOWELS.has(prev); const nV = next && VOWELS.has(next); return (!pV && !nV); }
       return false;
     }
     function lettersOnlyUpper(s){ return (s||'').replace(/[^A-Z]/g,''); }
-
     function nameNumbers(fullNameUpper){
       const clean = lettersOnlyUpper(fullNameUpper);
       const words = fullNameUpper.split(/\s+/).filter(Boolean);
@@ -131,28 +121,20 @@
       const presentSimple = new Set();
       for (let w of words){
         for (let i=0;i<w.length;i++){
-          const ch = w[i];
-          if (!/[A-Z]/.test(ch)) continue;
-          const val = LETTER_VAL[ch];
-          total += val;
-          presentSimple.add(val);
-          const prev = i>0 ? w[i-1] : null;
-          const next = i<w.length-1 ? w[i+1] : null;
+          const ch=w[i]; if (!/[A-Z]/.test(ch)) continue;
+          const val=LETTER_VAL[ch]; total+=val; presentSimple.add(val);
+          const prev = i>0 ? w[i-1] : null; const next = i<w.length-1 ? w[i+1] : null;
           if (isVowelLike(ch, prev, next)) vowelsTotal += val; else consonantsTotal += val;
         }
       }
       const expression = reduceNum(total);
       const soulUrge  = reduceNum(vowelsTotal);
       const personality = reduceNum(consonantsTotal);
-      const karmicLessons = [];
-      for (let n=1;n<=9;n++){ if (!presentSimple.has(n)) karmicLessons.push(n); }
+      const karmicLessons = []; for (let n=1;n<=9;n++){ if (!presentSimple.has(n)) karmicLessons.push(n); }
       return {expression, soulUrge, personality, totals:{total, vowelsTotal, consonantsTotal}, karmicLessons};
     }
-
     function maturityNumber(lifePath, expression){ return reduceNum(lifePath + expression); }
-
     function karmicDebtFlags(fullNameUpper, dobStr){
-      // Check pre-reduction tallies for 13,14,16,19
       const rawTotal = lettersOnlyUpper(fullNameUpper).split('').reduce((a,ch)=>a + LETTER_VAL[ch], 0);
       const words = fullNameUpper.split(/\s+/).filter(Boolean);
       let vowelTotal=0;
@@ -163,26 +145,15 @@
         }
       }
       const consTotal = rawTotal - vowelTotal;
-      const d = new Date(dobStr);
-      const yS = digitSum(d.getFullYear()), mS = digitSum(d.getMonth()+1), dS = digitSum(d.getDate());
+      const d=new Date(dobStr); const yS=digitSum(d.getFullYear()), mS=digitSum(d.getMonth()+1), dS=digitSum(d.getDate());
       const lifeRaw = digitSum(reduceNum(yS) + reduceNum(mS) + reduceNum(dS));
-      const debts = new Set();
-      const check = (n)=>{ if ([13,14,16,19].includes(n)) debts.add(n); };
+      const debts=new Set(); const check=n=>{ if ([13,14,16,19].includes(n)) debts.add(n); };
       [rawTotal, vowelTotal, consTotal, yS, mS, dS, lifeRaw].forEach(check);
       return Array.from(debts).sort((a,b)=>a-b);
     }
 
+    // ---------- Meanings, Karmic Lesson descriptions, Compatibility, Tarot/Zodiac ----------
     const NUM_TEXT = {
-      core: {
-        lifePath: "Core life lesson and natural path of growth.",
-        expression: "Total potential and talents (from full name).",
-        soulUrge: "Inner desires and motivations (from vowels).",
-        personality: "Outer style and first impression (from consonants).",
-        birthday: "Innate gift from birth day.",
-        maturity: "Late-life synthesis of Life Path + Expression.",
-        lessons: "Numbers 1–9 missing from your name — areas to consciously develop.",
-        debts: "Karmic Debts (13/4, 14/5, 16/7, 19/1) indicate patterns to balance."
-      },
       numbers: {
         1:"Leadership, initiative, independence.",
         2:"Cooperation, diplomacy, sensitivity.",
@@ -197,98 +168,101 @@
         22:"Master builder, large-scale practicality (Master).",
         33:"Compassionate teacher, service (Master)."
       },
-      debts: {
-        13:"Transforming procrastination into disciplined craft (4).",
-        14:"Balancing freedom with responsibility (5).",
-        16:"Humbling of ego; building inner integrity (7).",
-        19:"Self-reliance without isolation; healthy leadership (1)."
+      lessons: {
+        1:"Develop independence, initiative and self-trust.",
+        2:"Practise cooperation, patience and sensitivity.",
+        3:"Cultivate creativity, joy and clear communication.",
+        4:"Build discipline, organisation and persistence.",
+        5:"Balance freedom with responsibility; channel change well.",
+        6:"Nurture responsibility, care and relational balance.",
+        7:"Grow inner wisdom, faith and spiritual depth.",
+        8:"Create a healthy relationship with power, money and authority.",
+        9:"Deepen compassion, service and a wider perspective."
+      },
+      compat: {
+        // General-purpose compatibility sets (can be refined later per-number nuance)
+        1: {good:[3,5,9], bad:[4,6]},
+        2: {good:[4,6,9], bad:[1,8]},
+        3: {good:[1,5,7], bad:[4,8]},
+        4: {good:[2,6,8], bad:[3,5]},
+        5: {good:[1,3,7], bad:[2,6]},
+        6: {good:[2,4,9], bad:[5,7]},
+        7: {good:[2,4,9], bad:[5,8]},
+        8: {good:[4,6,9], bad:[2,3]},
+        9: {good:[1,2,6], bad:[4,8]}
+      },
+      tarot: {
+        // Reduced 1–9 with corrected Sun=1 mapping and your zodiac links
+        1: {majors:["The Magician (I)","Wheel of Fortune (X→1)","The Sun (XIX→1)"], zodiac:["—"]},
+        2: {majors:["The High Priestess (II)","Justice (XI→2)","Judgement (XX→2)"], zodiac:["Libra"]},
+        3: {majors:["The Empress (III)","The Hanged Man (XII→3)","The World (XXI→3)"], zodiac:["Pisces"]},
+        4: {majors:["The Emperor (IV)","Death (XIII→4)"], zodiac:["Aries","Scorpio"]},
+        5: {majors:["The Hierophant (V)","Temperance (XIV→5)"], zodiac:["Taurus","Sagittarius"]},
+        6: {majors:["The Lovers (VI)","The Devil (XV→6)"], zodiac:["Gemini","Capricorn"]},
+        7: {majors:["The Chariot (VII)","The Tower (XVI→7)"], zodiac:["Cancer"]},
+        8: {majors:["Strength (VIII)","The Star (XVII→8)"], zodiac:["Leo","Aquarius"]},
+        9: {majors:["The Hermit (IX)","The Moon (XVIII→9)"], zodiac:["Virgo"]}
       }
     };
-
     function numberMeaning(n){ return NUM_TEXT.numbers[n] || ""; }
-
-    function explainChart(chart){
-      const lines = [];
-      lines.push(`<p><strong>Life Path:</strong> ${chart.lifePath} — ${numberMeaning(chart.lifePath)}<br><em>${NUM_TEXT.core.lifePath}</em></p>`);
-      lines.push(`<p><strong>Expression/Destiny:</strong> ${chart.expression} — ${numberMeaning(chart.expression)}<br><em>${NUM_TEXT.core.expression}</em></p>`);
-      lines.push(`<p><strong>Soul Urge/Heart's Desire:</strong> ${chart.soulUrge} — ${numberMeaning(chart.soulUrge)}<br><em>${NUM_TEXT.core.soulUrge}</em></p>`);
-      lines.push(`<p><strong>Personality:</strong> ${chart.personality} — ${numberMeaning(chart.personality)}<br><em>${NUM_TEXT.core.personality}</em></p>`);
-      lines.push(`<p><strong>Birthday Number:</strong> ${chart.birthday} — ${numberMeaning(chart.birthday)}<br><em>${NUM_TEXT.core.birthday}</em></p>`);
-      lines.push(`<p><strong>Maturity/Realization:</strong> ${chart.maturity} — ${numberMeaning(chart.maturity)}<br><em>${NUM_TEXT.core.maturity}</em></p>`);
-      if (chart.karmicDebts.length){
-        const parts = chart.karmicDebts.map(d=>`${d}: ${NUM_TEXT.debts[d]||''}`);
-        lines.push(`<p><strong>Karmic Debts:</strong> ${parts.join('; ')}<br><em>${NUM_TEXT.core.debts}</em></p>`);
-      }
-      if (chart.karmicLessons.length){
-        lines.push(`<p><strong>Karmic Lessons (missing name numbers):</strong> ${chart.karmicLessons.join(', ')}<br><em>${NUM_TEXT.core.lessons}</em></p>`);
-      }
-      return lines.join('\n');
+    function compatFor(n){
+      const root = [11,22,33].includes(n) ? (n===11?2:(n===22?4:6)) : n;
+      return NUM_TEXT.compat[root] || {good:[], bad:[]};
+    }
+    function tarotFor(n){
+      const root = [11,22,33].includes(n) ? (n===11?2:(n===22?4:6)) : n;
+      return NUM_TEXT.tartot || null;
     }
 
-    function deterministicallyPickGuide(guides, normalizedUpperName, dobStr, chart){
-      // Composite uses normalized uppercase name to remove case/spacing variance
-      const composite = `${normalizedUpperName}|${dobStr}|${chart.lifePath}|${chart.expression}|${chart.soulUrge}|${chart.personality}|${chart.birthday}|${chart.maturity}|${chart.karmicDebts.join('-')}|${chart.karmicLessons.join('-')}`;
-      const seed = djb2Hash(composite);
-      const idx = seed % guides.length;
-      return {idx, seed};
-    }
-
-    // Speech synthesis with calming defaults
-    let VOICES = [];
-    function loadVoices(){
-      VOICES = window.speechSynthesis.getVoices();
-      const sel = document.getElementById('voiceSel');
-      sel.innerHTML = '';
-      VOICES.forEach((v,i)=>{
-        const opt = document.createElement('option');
-        opt.value = i; opt.textContent = `${v.name} (${v.lang})`;
-        sel.appendChild(opt);
-      });
-
-      // Prefer calming UK female voices if available
-      const preferredNames = [
-        'Microsoft Sonia Online (Natural) - English (United Kingdom)',
-        'Microsoft Libby Online (Natural) - English (United Kingdom)',
-        'Google UK English Female',
-        'Microsoft Hazel Desktop - English (Great Britain)'
-      ];
-      let idx = VOICES.findIndex(v=>preferredNames.includes(v.name));
-      if (idx === -1){ idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang) && /female/i.test(v.name)); }
-      if (idx === -1){ idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang)); }
-      if (idx === -1){ idx = VOICES.findIndex(v=>/en-/i.test(v.lang)); }
-      if (idx < 0) idx = 0;
-      sel.selectedIndex = idx;
-    }
-    if ('speechSynthesis' in window){
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-      setTimeout(loadVoices, 200);
-    }
-
-    function speakText(text){
-      if (!('speechSynthesis' in window)) { alert('Speech synthesis not supported in this browser.'); return; }
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      const sel = document.getElementById('voiceSel');
-      const rateSel = document.getElementById('rateSel');
-      const chosen = VOICES[sel.selectedIndex];
-      if (chosen) u.voice = chosen;
-      u.rate = parseFloat(rateSel.value || '0.85'); // calmer default
-      u.pitch = 1.0;
-      u.volume = 1.0;
-      window.speechSynthesis.speak(u);
-    }
-    function stopSpeak(){ if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
-
+    // ---------- UI helpers ----------
     function setText(id, t){ document.getElementById(id).textContent = t; }
     function byId(id){ return document.getElementById(id); }
     function show(el){ el.classList.remove('hidden'); }
     function hide(el){ el.classList.add('hidden'); }
 
+    // ---------- Data + Rendering ----------
     async function loadGuides(){
       const res = await fetch('backstories_full_fixed.json', {cache:'no-store'});
       if (!res.ok) throw new Error('Cannot load backstories JSON');
       const data = await res.json();
       return data.guides || data;
+    }
+
+    function explainKarmicLessons(list){
+      if (!list || !list.length) return "<p><strong>Karmic Lessons:</strong> None — your name contains all base numbers 1–9.</p>";
+      const lines = list.map(n => `<li><strong>${n}:</strong> ${NUM_TEXT.lessons[n]}</li>`).join('');
+      return `<p><strong>Karmic Lessons (missing name numbers):</strong></p><ul>${lines}</ul>`;
+    }
+
+    function tarotCompatBlock(title, value){
+      const root = [11,22,33].includes(value) ? (value===11?2:(value===22?4:6)) : value;
+      const comp = compatFor(value);
+      const tarot = NUM_TEXT.tarot[root];
+      const majors = tarot ? tarot.majors.join(', ') : '—';
+      const zodiac = tarot ? (tarot.zodiac.join(' & ') || '—') : '—';
+      const meaning = numberMeaning(value);
+      return `
+        <h4>${title}: ${value}</h4>
+        <p><em>${meaning}</em></p>
+        <p><strong>Compatible:</strong> ${comp.good.join(', ') || '—'} &nbsp; • &nbsp; <strong>Challenging:</strong> ${comp.bad.join(', ') || '—'}</p>
+        <p><strong>Tarot:</strong> ${majors}<br/><strong>Zodiac link:</strong> ${zodiac}</p>
+      `;
+    }
+
+    function explainChart(chart){
+      const blocks = [];
+      blocks.push(tarotCompatBlock('Life Path', chart.lifePath));
+      blocks.push(tarotCompatBlock('Expression / Destiny', chart.expression));
+      blocks.push(tarotCompatBlock('Soul Urge / Heart\'s Desire', chart.soulUrge));
+      blocks.push(tarotCompatBlock('Personality', chart.personality));
+      blocks.push(tarotCompatBlock('Birthday Number', chart.birthday));
+      blocks.push(tarotCompatBlock('Maturity / Realization', chart.maturity));
+      blocks.push(explainKarmicLessons(chart.karmicLessons));
+      if (chart.karmicDebts.length){
+        const deb = chart.karmicDebts.map(d=>`${d}`).join(', ');
+        blocks.push(`<p><strong>Karmic Debts:</strong> ${deb} — patterns to balance.</p>`);
+      }
+      return blocks.join('\n');
     }
 
     function renderChart(chart){
@@ -305,7 +279,7 @@
       for (const [label, val] of rows){
         const row = document.createElement('div');
         row.className = 'num-row';
-        row.innerHTML = `<div class="num-label">${label}</div><div class="num-val">${val}</div><div class="num-mean">${(val!=null)?(val):''}</div>`;
+        row.innerHTML = `<div class="num-label">${label}</div><div class="num-val">${val}</div><div class="num-mean">${numberMeaning(val)}</div>`;
         grid.appendChild(row);
       }
       if (chart.karmicDebts.length){
@@ -317,61 +291,68 @@
       if (chart.karmicLessons.length){
         const row = document.createElement('div');
         row.className = 'num-row';
-        row.innerHTML = `<div class="num-label">Karmic Lessons</div><div class="num-val">${chart.karmicLessons.join(', ')}</div><div class="num-mean">Skills to strengthen</div>`;
+        row.innerHTML = `<div class="num-label">Karmic Lessons</div><div class="num-val">${chart.karmicLessons.join(', ')}</div><div class="num-mean">See details below</div>`;
         grid.appendChild(row);
       }
-      document.getElementById('chartExplain').innerHTML = (()=>{
-        const lines = [];
-        const numTxt = (n)=> ({
-          1:"Leadership, initiative, independence.",
-          2:"Cooperation, diplomacy, sensitivity.",
-          3:"Creativity, expression, joy.",
-          4:"Stability, systems, diligence.",
-          5:"Change, freedom, adventure.",
-          6:"Care, responsibility, harmony.",
-          7:"Analysis, mysticism, depth.",
-          8:"Power, material mastery, authority.",
-          9:"Compassion, service, completion.",
-          11:"Spiritual insight, inspiration (Master).",
-          22:"Master builder, large-scale practicality (Master).",
-          33:"Compassionate teacher, service (Master)."
-        }[n] || '');
-        function line(title, val, desc){
-          return `<p><strong>${title}:</strong> ${val} — ${numTxt(val)}<br><em>${desc}</em></p>`;
-        }
-        lines.push(line('Life Path', chart.lifePath, "Core life lesson and natural path of growth."));
-        lines.push(line('Expression/Destiny', chart.expression, "Total potential and talents (from full name)."));
-        lines.push(line('Soul Urge/Heart\'s Desire', chart.soulUrge, "Inner desires and motivations (from vowels)."));
-        lines.push(line('Personality', chart.personality, "Outer style and first impression (from consonants)."));
-        lines.push(line('Birthday Number', chart.birthday, "Innate gift from birth day."));
-        lines.push(line('Maturity/Realization', chart.maturity, "Late-life synthesis of Life Path + Expression."));
-        if (chart.karmicDebts.length){
-          lines.push(`<p><strong>Karmic Debts:</strong> ${chart.karmicDebts.join(', ')} — indicate patterns to balance.</p>`);
-        }
-        if (chart.karmicLessons.length){
-          lines.push(`<p><strong>Karmic Lessons:</strong> ${chart.karmicLessons.join(', ')} — numbers missing from your name, skills to strengthen.</p>`);
-        }
-        return lines.join('\n');
-      })();
+      document.getElementById('chartExplain').innerHTML = explainChart(chart);
     }
 
-    function copySummaryText(){
-      const name = byId('guideName').textContent;
-      const meta = byId('guideMeta').textContent;
-      const life = byId('lifePath').textContent;
-      const seed = byId('seedOut').textContent;
-      const kw = [...document.querySelectorAll('#keywords li')].map(li=>li.textContent).join(', ');
-      const mantra = byId('mantra').textContent;
-      const back = byId('backstory').textContent;
-      const chartText = byId('chartExplain').innerText;
-      const txt = `${name}\n${meta}\n${life} • ${seed}\n\nKeywords: ${kw}\n\nMantra:\n${mantra}\n\nBackstory:\n${back}\n\nNumerology Chart:\n${chartText}`;
-      navigator.clipboard.writeText(txt).then(()=>alert('Copied!')).catch(()=>alert('Copy failed.'));
+    // ---------- Deterministic guide picker ----------
+    function deterministicallyPickGuide(guides, normalizedUpperName, dobStr, chart){
+      const composite = `${normalizedUpperName}|${dobStr}|${chart.lifePath}|${chart.expression}|${chart.soulUrge}|${chart.personality}|${chart.birthday}|${chart.maturity}|${chart.karmicDebts.join('-')}|${chart.karmicLessons.join('-')}`;
+      const seed = djb2Hash(composite);
+      const idx = seed % guides.length;
+      return {idx, seed};
     }
 
+    // ---------- Speech (calm defaults, en-GB female preferred) ----------
+    let VOICES = [];
+    function loadVoices(){
+      if (!('speechSynthesis' in window)) return;
+      VOICES = window.speechSynthesis.getVoices();
+      const sel = document.getElementById('voiceSel');
+      sel.innerHTML = '';
+      VOICES.forEach((v,i)=>{
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${v.name} (${v.lang})`;
+        sel.appendChild(opt);
+      });
+      const preferred = [
+        'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+        'Microsoft Libby Online (Natural) - English (United Kingdom)',
+        'Google UK English Female',
+        'Microsoft Hazel Desktop - English (Great Britain)'
+      ];
+      let idx = VOICES.findIndex(v=>preferred.includes(v.name));
+      if (idx === -1){ idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang) && /female/i.test(v.name)); }
+      if (idx === -1){ idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang)); }
+      if (idx === -1){ idx = VOICES.findIndex(v=>/en-/i.test(v.lang)); }
+      if (idx < 0) idx = 0;
+      sel.selectedIndex = idx;
+    }
+    if ('speechSynthesis' in window){
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      setTimeout(loadVoices, 200);
+    }
+    function speakText(text){
+      if (!('speechSynthesis' in window)) { alert('Speech synthesis not supported.'); return; }
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const sel = document.getElementById('voiceSel');
+      const rateSel = document.getElementById('rateSel');
+      const chosen = VOICES[sel.selectedIndex];
+      if (chosen) u.voice = chosen;
+      u.rate = parseFloat(rateSel.value || '0.85');
+      u.pitch = 1.0; u.volume = 1.0;
+      window.speechSynthesis.speak(u);
+    }
+    function stopSpeak(){ if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+
+    // ---------- App Boot ----------
     (async function(){
       document.getElementById('year').textContent = new Date().getFullYear();
       const guides = await loadGuides();
-      const LS_KEY = "spiritGuideResult_v3_1";
+      const LS_KEY = "spiritGuideResult_v3_2";
 
       const savedRaw = localStorage.getItem(LS_KEY);
       if (savedRaw){
@@ -415,7 +396,12 @@
           karmicDebts: debts, karmicLessons: nameNums.karmicLessons
         };
 
-        const pick = deterministicallyPickGuide(guides, normUpper, dobStr, chart);
+        const pick = (function(){
+          const composite = `${normUpper}|${dobStr}|${chart.lifePath}|${chart.expression}|${chart.soulUrge}|${chart.personality}|${chart.birthday}|${chart.maturity}|${chart.karmicDebts.join('-')}|${chart.karmicLessons.join('-')}`;
+          const seed = djb2Hash(composite);
+          const idx = seed % guides.length;
+          return {idx, seed};
+        })();
         const guide = guides[pick.idx];
 
         setText('guideName', guide.name);
@@ -439,8 +425,15 @@
         document.getElementById('dob').value = '1990-08-17';
         document.getElementById('intent').value = 'Show me how this works.';
       });
-      document.getElementById('copyBtn').addEventListener('click', copySummaryText);
-      document.getElementById('resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('spiritGuideResult_v3_1'); location.reload(); });
+      document.getElementById('copyBtn').addEventListener('click', ()=>{
+        const guide = document.getElementById('guideName').textContent;
+        const mantra = document.getElementById('mantra').textContent;
+        const back = document.getElementById('backstory').textContent;
+        const chart = document.getElementById('chartExplain').innerText;
+        const txt = `${guide}\nMantra: ${mantra}\n\nBackstory:\n${back}\n\nNumerology:\n${chart}`;
+        navigator.clipboard.writeText(txt).then(()=>alert('Copied!')).catch(()=>alert('Copy failed.'));
+      });
+      document.getElementById('resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('spiritGuideResult_v3_2'); location.reload(); });
 
       // Narration
       document.getElementById('speakBtn').addEventListener('click', ()=>{
