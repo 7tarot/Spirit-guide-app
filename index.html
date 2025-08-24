@@ -33,8 +33,8 @@
         <button class="btn ghost" type="button" id="demoBtn">Demo</button>
       </form>
       <p class="hint">
-        Uses Life Path, Destiny/Expression, Soul Urge, Personality, Birthday, Maturity, Karmic Debts & Lessons. 
-        Same inputs always yield the same guide. Saved locally (localStorage). 🗝️
+        Uses Life Path, Expression/Destiny, Soul Urge, Personality, Birthday, Maturity, Karmic Debts & Lessons. 
+        <strong>Deterministic:</strong> same inputs → same guide, regardless of name capitalisation or extra spaces.
       </p>
     </section>
 
@@ -54,9 +54,13 @@
         <div>
           <h3>Backstory</h3>
           <p id="backstory"></p>
-          <div class="actions">
+          <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn" id="speakBtn">🔈 Narrate backstory</button>
             <button class="btn ghost" id="stopSpeakBtn">Stop</button>
+            <label class="sr-only" for="voiceSel">Voice</label>
+            <select id="voiceSel" class="picker"></select>
+            <label class="sr-only" for="rateSel">Speed</label>
+            <input id="rateSel" type="range" min="0.6" max="1.1" step="0.05" value="0.85" title="Voice speed"/>
           </div>
         </div>
         <aside>
@@ -95,21 +99,22 @@
     const LETTER_VAL = {A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,I:9,J:1,K:2,L:3,M:4,N:5,O:6,P:7,Q:8,R:9,S:1,T:2,U:3,V:4,W:5,X:6,Y:7,Z:8};
     function djb2Hash(str){ let h=5381; for(let i=0;i<str.length;i++){ h=((h<<5)+h) ^ str.charCodeAt(i);} return h>>>0; }
     function digitSum(n){ return n.toString().split('').reduce((a,b)=>a+(+b),0); }
-    function reduceNum(n){
-      // Preserve master numbers 11/22/33 in reduction
-      while (![11,22,33].includes(n) && n>9){ n = digitSum(n); }
-      return n;
-    }
+    function reduceNum(n){ while (![11,22,33].includes(n) && n>9){ n = digitSum(n);} return n; }
+    function toYMD(dobStr){ const d=new Date(dobStr); return {d, y:d.getFullYear(), m:d.getMonth()+1, day:d.getDate()}; }
     function numForDate(d){
-      const y = d.getFullYear(); const m = d.getMonth()+1; const day = d.getDate();
-      const yR = reduceNum(digitSum(y)); const mR = reduceNum(digitSum(m)); const dR = reduceNum(digitSum(day));
+      const yR = reduceNum(digitSum(d.getFullYear()));
+      const mR = reduceNum(digitSum(d.getMonth()+1));
+      const dR = reduceNum(digitSum(d.getDate()));
       return reduceNum(yR + mR + dR);
     }
     function birthdayNumber(d){ return reduceNum(d.getDate()); }
-    function toYMD(dobStr){ const d=new Date(dobStr); return {d, y: d.getFullYear(), m:d.getMonth()+1, day:d.getDate()}; }
+    function normalizeName(raw){
+      // Trim, collapse multiple spaces, uppercase for hashing & numerology to ensure determinism
+      const collapsed = (raw||'').trim().replace(/\s+/g,' ');
+      return { display: collapsed, normUpper: collapsed.toUpperCase() };
+    }
     function isVowelLike(ch, prev, next){
       if (VOWELS.has(ch)) return true;
-      // Heuristic for Y as vowel: not first character of word and surrounded by consonants
       if (ch==='Y'){
         const pV = prev && VOWELS.has(prev);
         const nV = next && VOWELS.has(next);
@@ -117,68 +122,56 @@
       }
       return false;
     }
-    function lettersOnly(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,''); }
+    function lettersOnlyUpper(s){ return (s||'').replace(/[^A-Z]/g,''); }
 
-    function nameNumbers(fullName){
-      const clean = lettersOnly(fullName);
-      // Split into words to improve Y heuristic
-      const words = (fullName || '').toUpperCase().split(/\s+/).filter(Boolean);
+    function nameNumbers(fullNameUpper){
+      const clean = lettersOnlyUpper(fullNameUpper);
+      const words = fullNameUpper.split(/\s+/).filter(Boolean);
       let vowelsTotal=0, consonantsTotal=0, total=0;
-      const presentNums = new Set();
+      const presentSimple = new Set();
       for (let w of words){
         for (let i=0;i<w.length;i++){
           const ch = w[i];
           if (!/[A-Z]/.test(ch)) continue;
           const val = LETTER_VAL[ch];
           total += val;
-          presentNums.add(val);
+          presentSimple.add(val);
           const prev = i>0 ? w[i-1] : null;
           const next = i<w.length-1 ? w[i+1] : null;
           if (isVowelLike(ch, prev, next)) vowelsTotal += val; else consonantsTotal += val;
         }
       }
-      const expression = reduceNum(total);      // Destiny/Expression
-      const soulUrge  = reduceNum(vowelsTotal); // Heart's Desire
+      const expression = reduceNum(total);
+      const soulUrge  = reduceNum(vowelsTotal);
       const personality = reduceNum(consonantsTotal);
-
-      // Karmic lessons = numbers 1..9 not present in the name's letter values
-      const presentSimple = new Set();
-      for (const ch of clean){ presentSimple.add(LETTER_VAL[ch]); }
       const karmicLessons = [];
-      for (let n=1;n<=9;n++){
-        if (!presentSimple.has(n)) karmicLessons.push(n);
-      }
-
+      for (let n=1;n<=9;n++){ if (!presentSimple.has(n)) karmicLessons.push(n); }
       return {expression, soulUrge, personality, totals:{total, vowelsTotal, consonantsTotal}, karmicLessons};
     }
 
-    function maturityNumber(lifePath, expression){
-      return reduceNum(lifePath + expression);
-    }
+    function maturityNumber(lifePath, expression){ return reduceNum(lifePath + expression); }
 
-    function karmicDebtFlags(fullName, dobStr){
-      // Common karmic debts: 13/4, 14/5, 16/7, 19/1 from core numbers before reduction
-      // We'll compute pre-reduction sums
-      const name = (fullName||'').toUpperCase();
-      const rawTotal = lettersOnly(fullName).split('').reduce((a,ch)=>a + LETTER_VAL[ch], 0);
-      const vowelTotal = name.split('').reduce((a,ch,i)=>{
-        const prev = i>0 ? name[i-1] : null; const next = i<name.length-1 ? name[i+1] : null;
-        if (/[A-Z]/.test(ch) && isVowelLike(ch, prev, next)) return a + LETTER_VAL[ch];
-        return a;
-      }, 0);
+    function karmicDebtFlags(fullNameUpper, dobStr){
+      // Check pre-reduction tallies for 13,14,16,19
+      const rawTotal = lettersOnlyUpper(fullNameUpper).split('').reduce((a,ch)=>a + LETTER_VAL[ch], 0);
+      const words = fullNameUpper.split(/\s+/).filter(Boolean);
+      let vowelTotal=0;
+      for (let w of words){
+        for (let i=0;i<w.length;i++){
+          const ch=w[i]; const prev=i>0?w[i-1]:null; const next=i<w.length-1?w[i+1]:null;
+          if (/[A-Z]/.test(ch) && isVowelLike(ch, prev, next)) vowelTotal += LETTER_VAL[ch];
+        }
+      }
       const consTotal = rawTotal - vowelTotal;
       const d = new Date(dobStr);
-      const y = d.getFullYear(); const m = d.getMonth()+1; const day = d.getDate();
-      const yS = digitSum(y), mS = digitSum(m), dS = digitSum(day);
-      const lifeRaw = digitSum(reduceNum(yS) + reduceNum(mS) + reduceNum(dS)); // a proxy raw sum
-
+      const yS = digitSum(d.getFullYear()), mS = digitSum(d.getMonth()+1), dS = digitSum(d.getDate());
+      const lifeRaw = digitSum(reduceNum(yS) + reduceNum(mS) + reduceNum(dS));
       const debts = new Set();
       const check = (n)=>{ if ([13,14,16,19].includes(n)) debts.add(n); };
       [rawTotal, vowelTotal, consTotal, yS, mS, dS, lifeRaw].forEach(check);
       return Array.from(debts).sort((a,b)=>a-b);
     }
 
-    // Descriptions (concise; extended in explanations below)
     const NUM_TEXT = {
       core: {
         lifePath: "Core life lesson and natural path of growth.",
@@ -212,9 +205,7 @@
       }
     };
 
-    function numberMeaning(n){
-      return NUM_TEXT.numbers[n] || "";
-    }
+    function numberMeaning(n){ return NUM_TEXT.numbers[n] || ""; }
 
     function explainChart(chart){
       const lines = [];
@@ -224,7 +215,6 @@
       lines.push(`<p><strong>Personality:</strong> ${chart.personality} — ${numberMeaning(chart.personality)}<br><em>${NUM_TEXT.core.personality}</em></p>`);
       lines.push(`<p><strong>Birthday Number:</strong> ${chart.birthday} — ${numberMeaning(chart.birthday)}<br><em>${NUM_TEXT.core.birthday}</em></p>`);
       lines.push(`<p><strong>Maturity/Realization:</strong> ${chart.maturity} — ${numberMeaning(chart.maturity)}<br><em>${NUM_TEXT.core.maturity}</em></p>`);
-
       if (chart.karmicDebts.length){
         const parts = chart.karmicDebts.map(d=>`${d}: ${NUM_TEXT.debts[d]||''}`);
         lines.push(`<p><strong>Karmic Debts:</strong> ${parts.join('; ')}<br><em>${NUM_TEXT.core.debts}</em></p>`);
@@ -235,27 +225,71 @@
       return lines.join('\n');
     }
 
-    function deterministicallyPickGuide(guides, fullName, dobStr, chart){
-      // Combine multiple core numbers with name+dob seed
-      const composite = `${fullName}|${dobStr}|${chart.lifePath}|${chart.expression}|${chart.soulUrge}|${chart.personality}|${chart.birthday}|${chart.maturity}|${chart.karmicDebts.join('-')}|${chart.karmicLessons.join('-')}`;
+    function deterministicallyPickGuide(guides, normalizedUpperName, dobStr, chart){
+      // Composite uses normalized uppercase name to remove case/spacing variance
+      const composite = `${normalizedUpperName}|${dobStr}|${chart.lifePath}|${chart.expression}|${chart.soulUrge}|${chart.personality}|${chart.birthday}|${chart.maturity}|${chart.karmicDebts.join('-')}|${chart.karmicLessons.join('-')}`;
       const seed = djb2Hash(composite);
       const idx = seed % guides.length;
       return {idx, seed};
     }
 
-    // Speech synthesis
+    // Speech synthesis with calming defaults
+    let VOICES = [];
+    function loadVoices(){
+      VOICES = window.speechSynthesis.getVoices();
+      const sel = document.getElementById('voiceSel');
+      sel.innerHTML = '';
+      VOICES.forEach((v,i)=>{
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${v.name} (${v.lang})`;
+        sel.appendChild(opt);
+      });
+
+      // Prefer calming UK female voices if available
+      const preferredNames = [
+        'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+        'Microsoft Libby Online (Natural) - English (United Kingdom)',
+        'Google UK English Female',
+        'Microsoft Hazel Desktop - English (Great Britain)'
+      ];
+      let idx = VOICES.findIndex(v=>preferredNames.includes(v.name));
+      if (idx === -1){ idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang) && /female/i.test(v.name)); }
+      if (idx === -1){ idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang)); }
+      if (idx === -1){ idx = VOICES.findIndex(v=>/en-/i.test(v.lang)); }
+      if (idx < 0) idx = 0;
+      sel.selectedIndex = idx;
+    }
+    if ('speechSynthesis' in window){
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      setTimeout(loadVoices, 200);
+    }
+
     function speakText(text){
       if (!('speechSynthesis' in window)) { alert('Speech synthesis not supported in this browser.'); return; }
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      // Prefer a UK English voice when available
-      const voices = window.speechSynthesis.getVoices();
-      const uk = voices.find(v=>/en-GB/i.test(v.lang)) || voices.find(v=>/en-/i.test(v.lang)) || null;
-      if (uk) u.voice = uk;
-      u.rate = 1.0; u.pitch = 1.0;
+      const sel = document.getElementById('voiceSel');
+      const rateSel = document.getElementById('rateSel');
+      const chosen = VOICES[sel.selectedIndex];
+      if (chosen) u.voice = chosen;
+      u.rate = parseFloat(rateSel.value || '0.85'); // calmer default
+      u.pitch = 1.0;
+      u.volume = 1.0;
       window.speechSynthesis.speak(u);
     }
     function stopSpeak(){ if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+
+    function setText(id, t){ document.getElementById(id).textContent = t; }
+    function byId(id){ return document.getElementById(id); }
+    function show(el){ el.classList.remove('hidden'); }
+    function hide(el){ el.classList.add('hidden'); }
+
+    async function loadGuides(){
+      const res = await fetch('backstories_full_fixed.json', {cache:'no-store'});
+      if (!res.ok) throw new Error('Cannot load backstories JSON');
+      const data = await res.json();
+      return data.guides || data;
+    }
 
     function renderChart(chart){
       const grid = document.getElementById('chartGrid');
@@ -271,10 +305,9 @@
       for (const [label, val] of rows){
         const row = document.createElement('div');
         row.className = 'num-row';
-        row.innerHTML = `<div class="num-label">${label}</div><div class="num-val">${val}</div><div class="num-mean">${numberMeaning(val)}</div>`;
+        row.innerHTML = `<div class="num-label">${label}</div><div class="num-val">${val}</div><div class="num-mean">${(val!=null)?(val):''}</div>`;
         grid.appendChild(row);
       }
-
       if (chart.karmicDebts.length){
         const row = document.createElement('div');
         row.className = 'num-row';
@@ -287,20 +320,39 @@
         row.innerHTML = `<div class="num-label">Karmic Lessons</div><div class="num-val">${chart.karmicLessons.join(', ')}</div><div class="num-mean">Skills to strengthen</div>`;
         grid.appendChild(row);
       }
-
-      document.getElementById('chartExplain').innerHTML = explainChart(chart);
-    }
-
-    function setText(id, t){ document.getElementById(id).textContent = t; }
-    function byId(id){ return document.getElementById(id); }
-    function show(el){ el.classList.remove('hidden'); }
-    function hide(el){ el.classList.add('hidden'); }
-
-    async function loadGuides(){
-      const res = await fetch('backstories_full_fixed.json', {cache:'no-store'});
-      if (!res.ok) throw new Error('Cannot load backstories JSON');
-      const data = await res.json();
-      return data.guides || data;
+      document.getElementById('chartExplain').innerHTML = (()=>{
+        const lines = [];
+        const numTxt = (n)=> ({
+          1:"Leadership, initiative, independence.",
+          2:"Cooperation, diplomacy, sensitivity.",
+          3:"Creativity, expression, joy.",
+          4:"Stability, systems, diligence.",
+          5:"Change, freedom, adventure.",
+          6:"Care, responsibility, harmony.",
+          7:"Analysis, mysticism, depth.",
+          8:"Power, material mastery, authority.",
+          9:"Compassion, service, completion.",
+          11:"Spiritual insight, inspiration (Master).",
+          22:"Master builder, large-scale practicality (Master).",
+          33:"Compassionate teacher, service (Master)."
+        }[n] || '');
+        function line(title, val, desc){
+          return `<p><strong>${title}:</strong> ${val} — ${numTxt(val)}<br><em>${desc}</em></p>`;
+        }
+        lines.push(line('Life Path', chart.lifePath, "Core life lesson and natural path of growth."));
+        lines.push(line('Expression/Destiny', chart.expression, "Total potential and talents (from full name)."));
+        lines.push(line('Soul Urge/Heart\'s Desire', chart.soulUrge, "Inner desires and motivations (from vowels)."));
+        lines.push(line('Personality', chart.personality, "Outer style and first impression (from consonants)."));
+        lines.push(line('Birthday Number', chart.birthday, "Innate gift from birth day."));
+        lines.push(line('Maturity/Realization', chart.maturity, "Late-life synthesis of Life Path + Expression."));
+        if (chart.karmicDebts.length){
+          lines.push(`<p><strong>Karmic Debts:</strong> ${chart.karmicDebts.join(', ')} — indicate patterns to balance.</p>`);
+        }
+        if (chart.karmicLessons.length){
+          lines.push(`<p><strong>Karmic Lessons:</strong> ${chart.karmicLessons.join(', ')} — numbers missing from your name, skills to strengthen.</p>`);
+        }
+        return lines.join('\n');
+      })();
     }
 
     function copySummaryText(){
@@ -319,8 +371,8 @@
     (async function(){
       document.getElementById('year').textContent = new Date().getFullYear();
       const guides = await loadGuides();
+      const LS_KEY = "spiritGuideResult_v3_1";
 
-      const LS_KEY = "spiritGuideResult_v3";
       const savedRaw = localStorage.getItem(LS_KEY);
       if (savedRaw){
         try{
@@ -328,42 +380,42 @@
           if (saved && saved.selectedId){
             const g = guides.find(x=>x.id===saved.selectedId);
             if (g){
-              // re-render from cache
               setText('guideName', g.name);
               setText('guideMeta', `${g.element} • ${g.domains.join(' • ')}`);
               setText('lifePath', `Life Path ${saved.chart.lifePath}`);
               setText('seedOut', `Seed ${saved.seed}`);
               setText('backstory', g.backstory);
               setText('sigil', g.sigil || '—');
-              const kwEl = byId('keywords'); kwEl.innerHTML=''; (g.keywords||[]).forEach(k=>{ const li=document.createElement('li'); li.textContent=k; kwEl.appendChild(li); });
-              byId('mantra').textContent = g.mantra || "I align with my guide's wisdom and act with clarity.";
+              const kwEl = document.getElementById('keywords'); kwEl.innerHTML=''; (g.keywords||[]).forEach(k=>{ const li=document.createElement('li'); li.textContent=k; kwEl.appendChild(li); });
+              document.getElementById('mantra').textContent = g.mantra || "I align with my guide's wisdom and act with clarity.";
               renderChart(saved.chart);
-              hide(byId('formSection')); show(byId('resultSection'));
+              hide(document.getElementById('formSection')); show(document.getElementById('resultSection'));
             }
           }
         }catch(e){ /* ignore */ }
       }
 
-      byId('guideForm').addEventListener('submit', (e)=>{
+      document.getElementById('guideForm').addEventListener('submit', (e)=>{
         e.preventDefault();
-        const fullName = byId('name').value.trim();
-        const dobStr = byId('dob').value;
-        const intent = byId('intent').value.trim();
-        if(!fullName || !dobStr) return;
+        const rawName = document.getElementById('name').value;
+        const dobStr = document.getElementById('dob').value;
+        const intent = document.getElementById('intent').value.trim();
+        if(!rawName || !dobStr) return;
 
+        const {display, normUpper} = normalizeName(rawName);
         const {d} = toYMD(dobStr);
         const lifePath = numForDate(d);
         const bday = birthdayNumber(d);
-        const nameNums = nameNumbers(fullName);
+        const nameNums = nameNumbers(normUpper);
         const maturity = maturityNumber(lifePath, nameNums.expression);
-        const debts = karmicDebtFlags(fullName, dobStr);
+        const debts = karmicDebtFlags(normUpper, dobStr);
         const chart = {
           lifePath, expression: nameNums.expression, soulUrge: nameNums.soulUrge,
           personality: nameNums.personality, birthday: bday, maturity,
           karmicDebts: debts, karmicLessons: nameNums.karmicLessons
         };
 
-        const pick = deterministicallyPickGuide(guides, fullName, dobStr, chart);
+        const pick = deterministicallyPickGuide(guides, normUpper, dobStr, chart);
         const guide = guides[pick.idx];
 
         setText('guideName', guide.name);
@@ -372,34 +424,34 @@
         setText('seedOut', `Seed ${pick.seed}`);
         setText('backstory', guide.backstory);
         setText('sigil', guide.sigil || '—');
-        const kwEl = byId('keywords'); kwEl.innerHTML=''; (guide.keywords||[]).forEach(k=>{ const li=document.createElement('li'); li.textContent=k; kwEl.appendChild(li); });
-        byId('mantra').textContent = guide.mantra || "I align with my guide's wisdom and act with clarity.";
+        const kwEl = document.getElementById('keywords'); kwEl.innerHTML=''; (guide.keywords||[]).forEach(k=>{ const li=document.createElement('li'); li.textContent=k; kwEl.appendChild(li); });
+        document.getElementById('mantra').textContent = guide.mantra || "I align with my guide's wisdom and act with clarity.";
         renderChart(chart);
 
-        const payload = { user:{fullName, dob:dobStr, intent}, selectedId: guide.id, seed: pick.seed, chart, when: new Date().toISOString() };
+        const payload = { user:{fullName: display, dob:dobStr, intent}, selectedId: guide.id, seed: pick.seed, chart, when: new Date().toISOString() };
         localStorage.setItem(LS_KEY, JSON.stringify(payload));
 
-        hide(byId('formSection')); show(byId('resultSection'));
+        hide(document.getElementById('formSection')); show(document.getElementById('resultSection'));
       });
 
-      byId('demoBtn').addEventListener('click', ()=>{
-        byId('name').value = 'Demo User';
-        byId('dob').value = '1990-08-17';
-        byId('intent').value = 'Show me how this works.';
+      document.getElementById('demoBtn').addEventListener('click', ()=>{
+        document.getElementById('name').value = 'Demo User';
+        document.getElementById('dob').value = '1990-08-17';
+        document.getElementById('intent').value = 'Show me how this works.';
       });
-      byId('copyBtn').addEventListener('click', copySummaryText);
-      byId('resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('spiritGuideResult_v3'); location.reload(); });
+      document.getElementById('copyBtn').addEventListener('click', copySummaryText);
+      document.getElementById('resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('spiritGuideResult_v3_1'); location.reload(); });
 
       // Narration
-      byId('speakBtn').addEventListener('click', ()=>{
-        const guide = byId('guideName').textContent;
-        const mantra = byId('mantra').textContent;
-        const back = byId('backstory').textContent;
-        const chart = byId('chartExplain').innerText;
+      document.getElementById('speakBtn').addEventListener('click', ()=>{
+        const guide = document.getElementById('guideName').textContent;
+        const mantra = document.getElementById('mantra').textContent;
+        const back = document.getElementById('backstory').textContent;
+        const chart = document.getElementById('chartExplain').innerText;
         const txt = `${guide}. Mantra: ${mantra}. Backstory: ${back}. Numerology: ${chart}`;
         speakText(txt);
       });
-      byId('stopSpeakBtn').addEventListener('click', stopSpeak);
+      document.getElementById('stopSpeakBtn').addEventListener('click', ()=>{ stopSpeak(); });
     })();
   </script>
 </body>
