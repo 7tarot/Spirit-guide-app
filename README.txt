@@ -1,16 +1,20 @@
-SPIRIT GUIDE APP — NUMEROLOGY EDITION (v2.2)
+SPIRIT GUIDE APP — NUMEROLOGY EDITION (v2.4)
 =============================================
 
-• Adds Karmic Lesson descriptions (for each missing number).
-• Adds Compatibility (good & challenging) for 1–9 (masters map to 2/4/6 roots).
-• Adds Tarot & Zodiac mapping (Majors reduced to 1–9; Sun→1 correction).
-• Expandable panel now shows these for **all** core numbers (Life Path, Expression, Soul Urge, Personality, Birthday, Maturity).
-• Deterministic mapping unchanged and robust (name normalised).
+NEW: Tweakable Connections Rules
+--------------------------------
+• Preset selector in the "Connections" card:
+  - Classic (v2.3): Soulmate PY 2/6, Karmic PY 7/9 (+ debt roots), Twin PY 1/2/6 (+ core roots)
+  - Steve's House: adds **PY 3** to Soulmate; other rules as above
+• Live recalculation when you switch presets (no retyping).
+
+Still includes:
+• Deterministic guide mapping (normalised name + DOB + full chart)
+• Full numerology chart + meanings + **compatibility + Tarot + zodiac** (in the expandable panel)
+• Calm UK female narration by default, with voice/speed controls
+• Private localStorage cache
 
 Run locally:
   python -m http.server 8080  → http://localhost:8080/
-
-Deploy:
-  Netlify Drop or GitHub Pages — upload files at root.
 
 © 2025 7 Tarot

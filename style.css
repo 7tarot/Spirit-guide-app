@@ -1,22 +1,16 @@
 /* Neon theme + control styles */
-:root{
-  --bg:#050505; --panel:#0b0f0c; --ink:#d6ffe9; --neon:#00ff88; --muted:#6be3b5;
-  --glow:0 0 15px rgba(0,255,136,0.35), 0 0 40px rgba(0,255,136,0.15);
-}
+:root{ --bg:#050505; --panel:#0b0f0c; --ink:#d6ffe9; --neon:#00ff88; --muted:#6be3b5; --glow:0 0 15px rgba(0,255,136,0.35), 0 0 40px rgba(0,255,136,0.15); }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{ margin:0; font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial;
-  color:var(--ink);
+body{ margin:0; font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial; color:var(--ink);
   background: radial-gradient(1000px 600px at 20% -10%, rgba(0,255,136,0.08), transparent),
-              radial-gradient(1200px 700px at 100% 0, rgba(0,255,136,0.07), transparent),
-              var(--bg);
-}
+              radial-gradient(1200px 700px at 100% 0, rgba(0,255,136,0.07), transparent), var(--bg); }
 .container{ max-width:980px; margin:0 auto; padding:24px; }
 .header{ text-align:center; margin-bottom:20px; }
 .header h1{ margin:10px 0 4px; font-size:clamp(28px,5vw,40px); text-shadow: var(--glow); }
 .tag{ color:var(--muted); opacity:0.9; }
-.card{ background: linear-gradient(180deg, rgba(0,255,136,0.05), rgba(0,0,0,0.3));
-  border:1px solid rgba(0,255,136,0.2); border-radius:16px; padding:20px; box-shadow: var(--glow); margin:16px 0; }
+.card{ background: linear-gradient(180deg, rgba(0,255,136,0.05), rgba(0,0,0,0.3)); border:1px solid rgba(0,255,136,0.2);
+  border-radius:16px; padding:20px; box-shadow: var(--glow); margin:16px 0; }
 .field{margin:12px 0}
 label{display:block;margin-bottom:6px;color:var(--muted)}
 input[type="text"],input[type="date"],textarea{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(0,255,136,0.25); background:#020302; color:var(--ink); }
@@ -45,7 +39,7 @@ ul{margin:8px 0 0 20px}
 .num-val{ font-weight:700; color:var(--neon); }
 .num-mean{ opacity:0.95; }
 
-/* Small control styles */
+/* Control styles */
 .picker{ background:#020302; color:var(--ink); border:1px solid rgba(0,255,136,0.25); border-radius:10px; padding:8px; }
 input[type="range"]{ accent-color: var(--neon); width:150px; }
 .sr-only{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
