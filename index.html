@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spirit Guide App — 7 Tarot</title>
+  <title>Spirit Guide App — Numerology Edition</title>
   <link rel="stylesheet" href="style.css"/>
   <meta name="theme-color" content="#00ff88"/>
 </head>
@@ -11,15 +11,15 @@
   <main class="container">
     <header class="header">
       <h1>Spirit Guide App</h1>
-      <p class="tag">Deterministic • Private • Offline‑ready</p>
+      <p class="tag">Deterministic • Full Numerology Chart • Private</p>
     </header>
 
     <section id="formSection" class="card">
-      <h2>Tell us about you</h2>
+      <h2>Your details</h2>
       <form id="guideForm">
         <div class="field">
-          <label for="name">Name</label>
-          <input type="text" id="name" placeholder="Your full name" required/>
+          <label for="name">Full name (as commonly used)</label>
+          <input type="text" id="name" placeholder="e.g., Steven John Abbott" required/>
         </div>
         <div class="field">
           <label for="dob">Birth date</label>
@@ -30,11 +30,11 @@
           <textarea id="intent" placeholder="What do you want guidance on?"></textarea>
         </div>
         <button class="btn" type="submit">Calculate</button>
-        <button class="btn ghost" type="button" id="demoBtn" title="Loads a friendly demo">Demo</button>
+        <button class="btn ghost" type="button" id="demoBtn">Demo</button>
       </form>
       <p class="hint">
-        This selection is <strong>deterministic</strong>: the same name + birth date will always map to the same guide.
-        Your result is saved in your browser only (localStorage). 🗝️
+        Uses Life Path, Destiny/Expression, Soul Urge, Personality, Birthday, Maturity, Karmic Debts & Lessons. 
+        Same inputs always yield the same guide. Saved locally (localStorage). 🗝️
       </p>
     </section>
 
@@ -54,28 +54,34 @@
         <div>
           <h3>Backstory</h3>
           <p id="backstory"></p>
+          <div class="actions">
+            <button class="btn" id="speakBtn">🔈 Narrate backstory</button>
+            <button class="btn ghost" id="stopSpeakBtn">Stop</button>
+          </div>
         </div>
         <aside>
           <h3>Keywords</h3>
           <ul id="keywords"></ul>
-
           <h3>Mantra</h3>
           <blockquote id="mantra"></blockquote>
-
           <h3>Sigil</h3>
           <p id="sigil" class="sigil"></p>
         </aside>
       </div>
 
+      <section class="card">
+        <h3>Your Numerology Chart</h3>
+        <div id="chartGrid" class="num-grid"></div>
+        <details style="margin-top:10px;">
+          <summary>What do these mean?</summary>
+          <div id="chartExplain"></div>
+        </details>
+      </section>
+
       <div class="actions">
         <button class="btn" id="copyBtn">Copy summary</button>
         <button class="btn ghost" id="resetBtn">Reset</button>
       </div>
-
-      <details class="card slim">
-        <summary>What makes this deterministic?</summary>
-        <p>We hash your <em>Name</em> + <em>Birth date</em> into a stable number using a DJB2‑style hash, then map that to the guide list. We also calculate your Life Path number to slightly shift the selection, in a predictable way.</p>
-      </details>
     </section>
 
     <footer class="footer">
@@ -84,107 +90,220 @@
   </main>
 
   <script>
-    // ---- Utilities ----
-    function djb2Hash(str) {
-      let h = 5381;
-      for (let i = 0; i < str.length; i++) {
-        h = ((h << 5) + h) ^ str.charCodeAt(i); // h * 33 ^ c
-      }
-      return h >>> 0; // unsigned
-    }
-
-    function digitSum(n) {
-      return n.toString().split('').reduce((a,b)=>a + (+b), 0);
-    }
-
-    function reduceLifePath(yyyymmdd) {
-      // Preserve 11/22/33 as master numbers
-      let n = yyyymmdd.toString().split('').reduce((a,b)=>a+(+b),0);
-      while (![11,22,33].includes(n) && n > 9) {
-        n = digitSum(n);
-      }
+    // ---------- Utilities ----------
+    const VOWELS = new Set(['A','E','I','O','U']);
+    const LETTER_VAL = {A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,I:9,J:1,K:2,L:3,M:4,N:5,O:6,P:7,Q:8,R:9,S:1,T:2,U:3,V:4,W:5,X:6,Y:7,Z:8};
+    function djb2Hash(str){ let h=5381; for(let i=0;i<str.length;i++){ h=((h<<5)+h) ^ str.charCodeAt(i);} return h>>>0; }
+    function digitSum(n){ return n.toString().split('').reduce((a,b)=>a+(+b),0); }
+    function reduceNum(n){
+      // Preserve master numbers 11/22/33 in reduction
+      while (![11,22,33].includes(n) && n>9){ n = digitSum(n); }
       return n;
     }
+    function numForDate(d){
+      const y = d.getFullYear(); const m = d.getMonth()+1; const day = d.getDate();
+      const yR = reduceNum(digitSum(y)); const mR = reduceNum(digitSum(m)); const dR = reduceNum(digitSum(day));
+      return reduceNum(yR + mR + dR);
+    }
+    function birthdayNumber(d){ return reduceNum(d.getDate()); }
+    function toYMD(dobStr){ const d=new Date(dobStr); return {d, y: d.getFullYear(), m:d.getMonth()+1, day:d.getDate()}; }
+    function isVowelLike(ch, prev, next){
+      if (VOWELS.has(ch)) return true;
+      // Heuristic for Y as vowel: not first character of word and surrounded by consonants
+      if (ch==='Y'){
+        const pV = prev && VOWELS.has(prev);
+        const nV = next && VOWELS.has(next);
+        return (!pV && !nV);
+      }
+      return false;
+    }
+    function lettersOnly(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,''); }
 
-    function pad2(n){ return n<10?'0'+n:n; }
+    function nameNumbers(fullName){
+      const clean = lettersOnly(fullName);
+      // Split into words to improve Y heuristic
+      const words = (fullName || '').toUpperCase().split(/\s+/).filter(Boolean);
+      let vowelsTotal=0, consonantsTotal=0, total=0;
+      const presentNums = new Set();
+      for (let w of words){
+        for (let i=0;i<w.length;i++){
+          const ch = w[i];
+          if (!/[A-Z]/.test(ch)) continue;
+          const val = LETTER_VAL[ch];
+          total += val;
+          presentNums.add(val);
+          const prev = i>0 ? w[i-1] : null;
+          const next = i<w.length-1 ? w[i+1] : null;
+          if (isVowelLike(ch, prev, next)) vowelsTotal += val; else consonantsTotal += val;
+        }
+      }
+      const expression = reduceNum(total);      // Destiny/Expression
+      const soulUrge  = reduceNum(vowelsTotal); // Heart's Desire
+      const personality = reduceNum(consonantsTotal);
 
-    function toYMD(dobStr){
-      // dobStr expected as YYYY-MM-DD
+      // Karmic lessons = numbers 1..9 not present in the name's letter values
+      const presentSimple = new Set();
+      for (const ch of clean){ presentSimple.add(LETTER_VAL[ch]); }
+      const karmicLessons = [];
+      for (let n=1;n<=9;n++){
+        if (!presentSimple.has(n)) karmicLessons.push(n);
+      }
+
+      return {expression, soulUrge, personality, totals:{total, vowelsTotal, consonantsTotal}, karmicLessons};
+    }
+
+    function maturityNumber(lifePath, expression){
+      return reduceNum(lifePath + expression);
+    }
+
+    function karmicDebtFlags(fullName, dobStr){
+      // Common karmic debts: 13/4, 14/5, 16/7, 19/1 from core numbers before reduction
+      // We'll compute pre-reduction sums
+      const name = (fullName||'').toUpperCase();
+      const rawTotal = lettersOnly(fullName).split('').reduce((a,ch)=>a + LETTER_VAL[ch], 0);
+      const vowelTotal = name.split('').reduce((a,ch,i)=>{
+        const prev = i>0 ? name[i-1] : null; const next = i<name.length-1 ? name[i+1] : null;
+        if (/[A-Z]/.test(ch) && isVowelLike(ch, prev, next)) return a + LETTER_VAL[ch];
+        return a;
+      }, 0);
+      const consTotal = rawTotal - vowelTotal;
       const d = new Date(dobStr);
-      const y = d.getFullYear();
-      const m = pad2(d.getMonth()+1);
-      const dd = pad2(d.getDate());
-      return `${y}${m}${dd}`;
+      const y = d.getFullYear(); const m = d.getMonth()+1; const day = d.getDate();
+      const yS = digitSum(y), mS = digitSum(m), dS = digitSum(day);
+      const lifeRaw = digitSum(reduceNum(yS) + reduceNum(mS) + reduceNum(dS)); // a proxy raw sum
+
+      const debts = new Set();
+      const check = (n)=>{ if ([13,14,16,19].includes(n)) debts.add(n); };
+      [rawTotal, vowelTotal, consTotal, yS, mS, dS, lifeRaw].forEach(check);
+      return Array.from(debts).sort((a,b)=>a-b);
     }
 
-    function pickGuide(guides, name, dob) {
-      const ymd = toYMD(dob);
-      const life = reduceLifePath(ymd);
-      const seed = djb2Hash((name||'') + '|' + ymd);
-      // Stable blend: index = (seed + life) % guides.length
-      const idx = (seed + life) % guides.length;
-      return { idx, life, seed };
+    // Descriptions (concise; extended in explanations below)
+    const NUM_TEXT = {
+      core: {
+        lifePath: "Core life lesson and natural path of growth.",
+        expression: "Total potential and talents (from full name).",
+        soulUrge: "Inner desires and motivations (from vowels).",
+        personality: "Outer style and first impression (from consonants).",
+        birthday: "Innate gift from birth day.",
+        maturity: "Late-life synthesis of Life Path + Expression.",
+        lessons: "Numbers 1–9 missing from your name — areas to consciously develop.",
+        debts: "Karmic Debts (13/4, 14/5, 16/7, 19/1) indicate patterns to balance."
+      },
+      numbers: {
+        1:"Leadership, initiative, independence.",
+        2:"Cooperation, diplomacy, sensitivity.",
+        3:"Creativity, expression, joy.",
+        4:"Stability, systems, diligence.",
+        5:"Change, freedom, adventure.",
+        6:"Care, responsibility, harmony.",
+        7:"Analysis, mysticism, depth.",
+        8:"Power, material mastery, authority.",
+        9:"Compassion, service, completion.",
+        11:"Spiritual insight, inspiration (Master).",
+        22:"Master builder, large-scale practicality (Master).",
+        33:"Compassionate teacher, service (Master)."
+      },
+      debts: {
+        13:"Transforming procrastination into disciplined craft (4).",
+        14:"Balancing freedom with responsibility (5).",
+        16:"Humbling of ego; building inner integrity (7).",
+        19:"Self-reliance without isolation; healthy leadership (1)."
+      }
+    };
+
+    function numberMeaning(n){
+      return NUM_TEXT.numbers[n] || "";
     }
 
-    function setText(id, text){ document.getElementById(id).textContent = text; }
+    function explainChart(chart){
+      const lines = [];
+      lines.push(`<p><strong>Life Path:</strong> ${chart.lifePath} — ${numberMeaning(chart.lifePath)}<br><em>${NUM_TEXT.core.lifePath}</em></p>`);
+      lines.push(`<p><strong>Expression/Destiny:</strong> ${chart.expression} — ${numberMeaning(chart.expression)}<br><em>${NUM_TEXT.core.expression}</em></p>`);
+      lines.push(`<p><strong>Soul Urge/Heart's Desire:</strong> ${chart.soulUrge} — ${numberMeaning(chart.soulUrge)}<br><em>${NUM_TEXT.core.soulUrge}</em></p>`);
+      lines.push(`<p><strong>Personality:</strong> ${chart.personality} — ${numberMeaning(chart.personality)}<br><em>${NUM_TEXT.core.personality}</em></p>`);
+      lines.push(`<p><strong>Birthday Number:</strong> ${chart.birthday} — ${numberMeaning(chart.birthday)}<br><em>${NUM_TEXT.core.birthday}</em></p>`);
+      lines.push(`<p><strong>Maturity/Realization:</strong> ${chart.maturity} — ${numberMeaning(chart.maturity)}<br><em>${NUM_TEXT.core.maturity}</em></p>`);
+
+      if (chart.karmicDebts.length){
+        const parts = chart.karmicDebts.map(d=>`${d}: ${NUM_TEXT.debts[d]||''}`);
+        lines.push(`<p><strong>Karmic Debts:</strong> ${parts.join('; ')}<br><em>${NUM_TEXT.core.debts}</em></p>`);
+      }
+      if (chart.karmicLessons.length){
+        lines.push(`<p><strong>Karmic Lessons (missing name numbers):</strong> ${chart.karmicLessons.join(', ')}<br><em>${NUM_TEXT.core.lessons}</em></p>`);
+      }
+      return lines.join('\n');
+    }
+
+    function deterministicallyPickGuide(guides, fullName, dobStr, chart){
+      // Combine multiple core numbers with name+dob seed
+      const composite = `${fullName}|${dobStr}|${chart.lifePath}|${chart.expression}|${chart.soulUrge}|${chart.personality}|${chart.birthday}|${chart.maturity}|${chart.karmicDebts.join('-')}|${chart.karmicLessons.join('-')}`;
+      const seed = djb2Hash(composite);
+      const idx = seed % guides.length;
+      return {idx, seed};
+    }
+
+    // Speech synthesis
+    function speakText(text){
+      if (!('speechSynthesis' in window)) { alert('Speech synthesis not supported in this browser.'); return; }
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      // Prefer a UK English voice when available
+      const voices = window.speechSynthesis.getVoices();
+      const uk = voices.find(v=>/en-GB/i.test(v.lang)) || voices.find(v=>/en-/i.test(v.lang)) || null;
+      if (uk) u.voice = uk;
+      u.rate = 1.0; u.pitch = 1.0;
+      window.speechSynthesis.speak(u);
+    }
+    function stopSpeak(){ if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+
+    function renderChart(chart){
+      const grid = document.getElementById('chartGrid');
+      grid.innerHTML = '';
+      const rows = [
+        ['Life Path', chart.lifePath],
+        ['Expression', chart.expression],
+        ['Soul Urge', chart.soulUrge],
+        ['Personality', chart.personality],
+        ['Birthday', chart.birthday],
+        ['Maturity', chart.maturity]
+      ];
+      for (const [label, val] of rows){
+        const row = document.createElement('div');
+        row.className = 'num-row';
+        row.innerHTML = `<div class="num-label">${label}</div><div class="num-val">${val}</div><div class="num-mean">${numberMeaning(val)}</div>`;
+        grid.appendChild(row);
+      }
+
+      if (chart.karmicDebts.length){
+        const row = document.createElement('div');
+        row.className = 'num-row';
+        row.innerHTML = `<div class="num-label">Karmic Debts</div><div class="num-val">${chart.karmicDebts.join(', ')}</div><div class="num-mean">Patterns to balance</div>`;
+        grid.appendChild(row);
+      }
+      if (chart.karmicLessons.length){
+        const row = document.createElement('div');
+        row.className = 'num-row';
+        row.innerHTML = `<div class="num-label">Karmic Lessons</div><div class="num-val">${chart.karmicLessons.join(', ')}</div><div class="num-mean">Skills to strengthen</div>`;
+        grid.appendChild(row);
+      }
+
+      document.getElementById('chartExplain').innerHTML = explainChart(chart);
+    }
+
+    function setText(id, t){ document.getElementById(id).textContent = t; }
     function byId(id){ return document.getElementById(id); }
     function show(el){ el.classList.remove('hidden'); }
     function hide(el){ el.classList.add('hidden'); }
 
-    // ---- App State ----
-    const LS_KEY = "spiritGuideResult_v2";
-
-    async function loadGuides() {
-      // Try fetching JSON first (best for deployed use), fallback to inline data if necessary
-      try {
-        const res = await fetch('backstories_full_fixed.json', {cache: 'no-store'});
-        if (!res.ok) throw new Error('Fetch failed');
-        const data = await res.json();
-        return data.guides || data;
-      } catch (e) {
-        console.warn('Falling back to inline guides due to fetch error:', e);
-        const inline = document.getElementById('inline-guides-json');
-        if (inline) {
-          try { return JSON.parse(inline.textContent).guides; }
-          catch(_) { /* ignore */ }
-        }
-        throw new Error('No guide data available.');
-      }
+    async function loadGuides(){
+      const res = await fetch('backstories_full_fixed.json', {cache:'no-store'});
+      if (!res.ok) throw new Error('Cannot load backstories JSON');
+      const data = await res.json();
+      return data.guides || data;
     }
 
-    function lifePathLabel(n){
-      return (n===11||n===22||n===33) ? `Life Path ${n} (Master)` : `Life Path ${n}`;
-    }
-
-    function renderResult(user, guide, idx, life, seed) {
-      setText('guideName', guide.name);
-      setText('guideMeta', `${guide.element} • ${guide.domains.join(' • ')}`);
-      setText('lifePath', lifePathLabel(life));
-      setText('seedOut', `Seed ${seed}`);
-      setText('backstory', guide.backstory);
-      setText('sigil', guide.sigil || '—');
-      const kw = byId('keywords');
-      kw.innerHTML = '';
-      (guide.keywords || []).forEach(k => {
-        const li = document.createElement('li');
-        li.textContent = k;
-        kw.appendChild(li);
-      });
-      show(byId('resultSection'));
-      hide(byId('formSection'));
-    }
-
-    function saveResult(payload){
-      localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    }
-
-    function loadSaved(){
-      const raw = localStorage.getItem(LS_KEY);
-      if (!raw) return null;
-      try { return JSON.parse(raw); } catch { return null; }
-    }
-
-    function copySummary(){
+    function copySummaryText(){
       const name = byId('guideName').textContent;
       const meta = byId('guideMeta').textContent;
       const life = byId('lifePath').textContent;
@@ -192,105 +311,96 @@
       const kw = [...document.querySelectorAll('#keywords li')].map(li=>li.textContent).join(', ');
       const mantra = byId('mantra').textContent;
       const back = byId('backstory').textContent;
-      const txt = `${name}\n${meta}\n${life} • ${seed}\n\nKeywords: ${kw}\n\nMantra:\n${mantra}\n\nBackstory:\n${back}`;
-      navigator.clipboard.writeText(txt).then(()=>{
-        alert('Copied your Spirit Guide summary to clipboard.');
-      }).catch(()=>{
-        alert('Could not copy automatically. Please select text and copy.');
-      });
+      const chartText = byId('chartExplain').innerText;
+      const txt = `${name}\n${meta}\n${life} • ${seed}\n\nKeywords: ${kw}\n\nMantra:\n${mantra}\n\nBackstory:\n${back}\n\nNumerology Chart:\n${chartText}`;
+      navigator.clipboard.writeText(txt).then(()=>alert('Copied!')).catch(()=>alert('Copy failed.'));
     }
 
-    // ---- Boot ----
     (async function(){
       document.getElementById('year').textContent = new Date().getFullYear();
       const guides = await loadGuides();
 
-      const saved = loadSaved();
-      if (saved && saved.selectedId) {
-        const guide = guides.find(g => g.id === saved.selectedId);
-        if (guide) {
-          renderResult(saved.user, guide, saved.index, saved.life, saved.seed);
-        }
+      const LS_KEY = "spiritGuideResult_v3";
+      const savedRaw = localStorage.getItem(LS_KEY);
+      if (savedRaw){
+        try{
+          const saved = JSON.parse(savedRaw);
+          if (saved && saved.selectedId){
+            const g = guides.find(x=>x.id===saved.selectedId);
+            if (g){
+              // re-render from cache
+              setText('guideName', g.name);
+              setText('guideMeta', `${g.element} • ${g.domains.join(' • ')}`);
+              setText('lifePath', `Life Path ${saved.chart.lifePath}`);
+              setText('seedOut', `Seed ${saved.seed}`);
+              setText('backstory', g.backstory);
+              setText('sigil', g.sigil || '—');
+              const kwEl = byId('keywords'); kwEl.innerHTML=''; (g.keywords||[]).forEach(k=>{ const li=document.createElement('li'); li.textContent=k; kwEl.appendChild(li); });
+              byId('mantra').textContent = g.mantra || "I align with my guide's wisdom and act with clarity.";
+              renderChart(saved.chart);
+              hide(byId('formSection')); show(byId('resultSection'));
+            }
+          }
+        }catch(e){ /* ignore */ }
       }
 
-      // Form
-      const form = byId('guideForm');
-      form.addEventListener('submit', (e)=>{
+      byId('guideForm').addEventListener('submit', (e)=>{
         e.preventDefault();
-        const name = byId('name').value.trim();
-        const dob  = byId('dob').value;
+        const fullName = byId('name').value.trim();
+        const dobStr = byId('dob').value;
         const intent = byId('intent').value.trim();
+        if(!fullName || !dobStr) return;
 
-        if (!name || !dob) return;
+        const {d} = toYMD(dobStr);
+        const lifePath = numForDate(d);
+        const bday = birthdayNumber(d);
+        const nameNums = nameNumbers(fullName);
+        const maturity = maturityNumber(lifePath, nameNums.expression);
+        const debts = karmicDebtFlags(fullName, dobStr);
+        const chart = {
+          lifePath, expression: nameNums.expression, soulUrge: nameNums.soulUrge,
+          personality: nameNums.personality, birthday: bday, maturity,
+          karmicDebts: debts, karmicLessons: nameNums.karmicLessons
+        };
 
-        const { idx, life, seed } = pickGuide(guides, name, dob);
-        const guide = guides[idx];
-        renderResult({name, dob, intent}, guide, idx, life, seed);
-        saveResult({
-          user: {name, dob, intent},
-          index: idx,
-          life,
-          seed,
-          selectedId: guide.id,
-          when: new Date().toISOString()
-        });
+        const pick = deterministicallyPickGuide(guides, fullName, dobStr, chart);
+        const guide = guides[pick.idx];
+
+        setText('guideName', guide.name);
+        setText('guideMeta', `${guide.element} • ${guide.domains.join(' • ')}`);
+        setText('lifePath', `Life Path ${lifePath}`);
+        setText('seedOut', `Seed ${pick.seed}`);
+        setText('backstory', guide.backstory);
+        setText('sigil', guide.sigil || '—');
+        const kwEl = byId('keywords'); kwEl.innerHTML=''; (guide.keywords||[]).forEach(k=>{ const li=document.createElement('li'); li.textContent=k; kwEl.appendChild(li); });
+        byId('mantra').textContent = guide.mantra || "I align with my guide's wisdom and act with clarity.";
+        renderChart(chart);
+
+        const payload = { user:{fullName, dob:dobStr, intent}, selectedId: guide.id, seed: pick.seed, chart, when: new Date().toISOString() };
+        localStorage.setItem(LS_KEY, JSON.stringify(payload));
+
+        hide(byId('formSection')); show(byId('resultSection'));
       });
 
-      // Demo loader (uses a stable internal demo seed)
       byId('demoBtn').addEventListener('click', ()=>{
         byId('name').value = 'Demo User';
         byId('dob').value = '1990-08-17';
         byId('intent').value = 'Show me how this works.';
       });
+      byId('copyBtn').addEventListener('click', copySummaryText);
+      byId('resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('spiritGuideResult_v3'); location.reload(); });
 
-      // Reset
-      byId('resetBtn').addEventListener('click', ()=>{
-        localStorage.removeItem(LS_KEY);
-        hide(byId('resultSection'));
-        show(byId('formSection'));
+      // Narration
+      byId('speakBtn').addEventListener('click', ()=>{
+        const guide = byId('guideName').textContent;
+        const mantra = byId('mantra').textContent;
+        const back = byId('backstory').textContent;
+        const chart = byId('chartExplain').innerText;
+        const txt = `${guide}. Mantra: ${mantra}. Backstory: ${back}. Numerology: ${chart}`;
+        speakText(txt);
       });
-
-      // Copy
-      byId('copyBtn').addEventListener('click', copySummary);
-
-      // Put mantra (some guides may not have, we add safe default)
-      const mantraEl = byId('mantra');
-      const observer = new MutationObserver(()=>{
-        const gname = byId('guideName').textContent;
-        const found = guides.find(g=>g.name===gname);
-        mantraEl.textContent = (found && found.mantra) ? found.mantra : "I align with my guide's wisdom and act with clarity.";
-      });
-      observer.observe(byId('guideName'), {childList:true});
+      byId('stopSpeakBtn').addEventListener('click', stopSpeak);
     })();
-  </script>
-
-  <!-- Optional inline fallback with two tiny guides to prove the UI when opened as file://
-       For full data, deploy with backstories_full_fixed.json in the same folder. -->
-  <script id="inline-guides-json" type="application/json">
-  {
-    "guides":[
-      {
-        "id":"zoriel",
-        "name":"Zoriel",
-        "element":"Fire",
-        "domains":["Leadership","Confidence","Trailblazing"],
-        "keywords":["ignite","direction","courage","momentum","clarity"],
-        "sigil":"⟡⟠⟡",
-        "mantra":"I move first, with warmth and wisdom.",
-        "backstory":"Inline fallback preview only. Please deploy with backstories_full_fixed.json for the full 12‑guide library."
-      },
-      {
-        "id":"nymera",
-        "name":"Nymera",
-        "element":"Water",
-        "domains":["Intuition","Compassion","Dreaming"],
-        "keywords":["listen","soothe","merge","feel","heal"],
-        "sigil":"≈✶≈",
-        "mantra":"I trust the quiet tides within.",
-        "backstory":"Inline fallback preview only. Please deploy with backstories_full_fixed.json for the full 12‑guide library."
-      }
-    ]
-  }
   </script>
 </body>
 </html>

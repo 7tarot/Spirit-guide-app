@@ -1,4 +1,4 @@
-/* Neon green on black aesthetic */
+/* Neon green on black aesthetic (extended) */
 :root{
   --bg:#050505;
   --panel:#0b0f0c;
@@ -12,7 +12,7 @@
 html,body{height:100%}
 body{
   margin:0;
-  font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+  font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
   color:var(--ink);
   background: radial-gradient(1000px 600px at 20% -10%, rgba(0,255,136,0.08), transparent),
               radial-gradient(1200px 700px at 100% 0, rgba(0,255,136,0.07), transparent),
@@ -20,36 +20,17 @@ body{
   letter-spacing:0.2px;
 }
 
-.container{
-  max-width:980px;
-  margin:0 auto;
-  padding:24px;
-}
-
-.header{
-  text-align:center;
-  margin-bottom:20px;
-}
-.header h1{
-  margin:10px 0 4px;
-  font-size:clamp(28px,5vw,40px);
-  text-shadow: var(--glow);
-}
-.tag{
-  color:var(--muted);
-  opacity:0.9;
-}
+.container{ max-width:980px; margin:0 auto; padding:24px; }
+.header{ text-align:center; margin-bottom:20px; }
+.header h1{ margin:10px 0 4px; font-size:clamp(28px,5vw,40px); text-shadow: var(--glow); }
+.tag{ color:var(--muted); opacity:0.9; }
 
 .card{
   background: linear-gradient(180deg, rgba(0,255,136,0.05), rgba(0,0,0,0.3));
   border:1px solid rgba(0,255,136,0.2);
-  border-radius:16px;
-  padding:20px;
-  box-shadow: var(--glow);
-  margin:16px 0;
+  border-radius:16px; padding:20px; box-shadow: var(--glow); margin:16px 0;
 }
 .card.slim{padding:12px}
-
 .field{margin:12px 0}
 label{display:block;margin-bottom:6px;color:var(--muted)}
 input[type="text"],input[type="date"],textarea{
@@ -66,43 +47,28 @@ textarea{min-height:96px;resize:vertical}
 }
 .btn:hover{filter:brightness(1.05)}
 .btn:active{transform:translateY(1px)}
-.btn.ghost{
-  background:transparent; color:var(--neon); border-color:rgba(0,255,136,0.4);
-}
+.btn.ghost{ background:transparent; color:var(--neon); border-color:rgba(0,255,136,0.4); }
 
 .hint{color:var(--muted);font-size:0.95rem;opacity:0.9}
-
 .hidden{display:none}
 
-.result-head{
-  display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
-}
+.result-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
 .meta{color:var(--muted)}
 .meta-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.pill{
-  border:1px solid rgba(0,255,136,0.35); padding:6px 10px; border-radius:999px; color:var(--neon);
-  box-shadow: var(--glow); font-size:0.9rem;
-}
+.pill{ border:1px solid rgba(0,255,136,0.35); padding:6px 10px; border-radius:999px; color:var(--neon); box-shadow: var(--glow); font-size:0.9rem; }
 
-.grid{
-  display:grid; grid-template-columns: minmax(0,1fr) 320px; gap:24px;
-}
-@media (max-width: 860px){
-  .grid{grid-template-columns: 1fr}
-}
+.grid{ display:grid; grid-template-columns: minmax(0,1fr) 320px; gap:24px; }
+@media (max-width: 860px){ .grid{grid-template-columns: 1fr} }
 
-blockquote{
-  margin:0; padding:12px 14px; border-left:3px solid var(--neon); background:#030804; border-radius:8px;
-}
-
-.sigil{
-  font-family: "Courier New", ui-monospace, monospace;
-  letter-spacing:2px; font-size:1.1rem;
-}
-
-.footer{
-  margin-top:16px; text-align:center; color:var(--muted);
-}
-
+blockquote{ margin:0; padding:12px 14px; border-left:3px solid var(--neon); background:#030804; border-radius:8px; }
+.sigil{ font-family: "Courier New", ui-monospace, monospace; letter-spacing:2px; font-size:1.1rem; }
+.footer{ margin-top:16px; text-align:center; color:var(--muted); }
 .actions{margin-top:12px}
 ul{margin:8px 0 0 20px}
+
+/* Numerology grid */
+.num-grid{ display:grid; grid-template-columns: 160px 80px 1fr; gap:10px; align-items:start; }
+.num-row{ display:contents; }
+.num-label{ color:var(--muted); }
+.num-val{ font-weight:700; color:var(--neon); }
+.num-mean{ opacity:0.95; }

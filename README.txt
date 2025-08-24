@@ -1,80 +1,49 @@
-SPIRIT GUIDE APP — ZIP PACKAGE
-================================
+SPIRIT GUIDE APP — NUMEROLOGY EDITION (v2)
+===========================================
 
-Files included:
-  • index.html                     — The app (deterministic selection + localStorage)
-  • style.css                      — Neon green on black styling
-  • backstories_full_fixed.json    — 12 guides, each with a long backstory, keywords, and metadata
-  • README.txt                     — This file
+This build adds a full numerology chart + text-to-speech narration.
 
-HOW IT WORKS
-------------
-• Deterministic selection:
-  The app hashes YOUR NAME + BIRTH DATE (YYYY-MM-DD) with a DJB2-style hash and combines it
-  with your numerology Life Path number (with 11/22/33 treated as master numbers). The result
-  maps to a guide index. Same inputs → same guide every time.
+FILES
+-----
+• index.html                   — App logic (deterministic selection using full numerology)
+• style.css                    — Neon green on black styling
+• backstories_full_fixed.json  — 12 guides with ~400-word backstories
+• README.txt                   — This file
 
-• localStorage:
-  Your result is saved privately in your browser (key: "spiritGuideResult_v2"). Use the Reset
-  button to clear it and run the app again.
+WHAT'S NEW VS v1
+----------------
+• Calculates and displays:
+  - Life Path (from date of birth)
+  - Destiny/Expression (from full name)
+  - Soul Urge / Heart's Desire (vowels of name)
+  - Personality (consonants of name)
+  - Birthday Number (day of month)
+  - Maturity / Realization (Life Path + Expression)
+  - Karmic Debts (13/4, 14/5, 16/7, 19/1) when present
+  - Karmic Lessons (missing name numbers 1–9)
+• Deterministic guide mapping now blends all of the above for a richer, stable result.
+• Built‑in narration (Web Speech API) reads the backstory + numerology summary aloud.
+• localStorage caches the full result so users return to the same guide and chart.
 
-• Backstories:
-  The app loads "backstories_full_fixed.json" by default. If you open the app directly via
-  "file://", some browsers block fetches; in that case you'll see a tiny inline fallback with
-  2 sample guides. For the full set, serve the files locally or deploy them (see below).
-
-
-RUN LOCALLY (no internet needed)
---------------------------------
-Option A) Quick Python server (any OS)
-  1. Open a terminal in this folder.
-  2. Run:  python -m http.server 8080
-  3. Visit: http://localhost:8080  (then click index.html)
-
-Option B) Node "serve"
-  1. npm i -g serve
-  2. serve .
-  3. Open the shown localhost URL.
-
-DEPLOY (Netlify / GitHub Pages / any static host)
--------------------------------------------------
-• Netlify (drag‑and‑drop):
-  1. Go to https://app.netlify.com/drop
-  2. Drag the whole folder (or just upload this ZIP and unzip on Netlify) — Netlify will host it.
-  3. Open the URL Netlify gives you. Everything will work immediately.
-
-• GitHub Pages:
-  1. Create a new repo and upload all the files.
-  2. Enable GitHub Pages in repo settings (root or /docs).
-  3. Visit the Pages URL it provides.
-
-CUSTOMISING
+RUN LOCALLY
 -----------
-• Add/modify guides in backstories_full_fixed.json. Keep structure:
-  {
-    "guides":[
-      {
-        "id":"unique-slug",
-        "name":"Name",
-        "element":"Element",
-        "domains":["A","B","C"],
-        "keywords":["x","y","z"],
-        "sigil":"optional symbol",
-        "color":"#hex",
-        "mantra":"Optional mantra sentence",
-        "backstory":"~300–400 words of lore."
-      }
-    ]
-  }
+Option A) Python
+  python -m http.server 8080
+  → Open http://localhost:8080/
 
-• You can safely change colours and glow in style.css.
+Option B) Netlify Drop (zero config)
+  https://app.netlify.com/drop  → drag the folder in.
 
-ACCESSIBILITY & OFFLINE
------------------------
-• No analytics. No network requests beyond loading the local JSON.
-• Works offline once loaded on a static host.
-• Keyboard friendly. Copy summary button to capture output quickly.
+GITHUB PAGES
+------------
+1) Create a repo and upload all four files at the root.
+2) Settings → Pages → Deploy from branch → branch: main, folder: / (root).
+3) Open the Pages URL.
 
-CREDITS
--------
-• © 2025 7 Tarot. You are free to use, modify, and deploy for your project.
+NOTES
+-----
+• Y-as-vowel is handled with a sensible heuristic (between consonants counts as vowel).
+• Master numbers 11/22/33 are preserved in reduction when relevant.
+• Speech synthesis uses the browser’s voices (prefers en‑GB if available).
+
+© 2025 7 Tarot — free to use and modify.
