@@ -1,0 +1,108 @@
+/* Neon green on black aesthetic */
+:root{
+  --bg:#050505;
+  --panel:#0b0f0c;
+  --ink:#d6ffe9;
+  --neon:#00ff88;
+  --muted:#6be3b5;
+  --glow:0 0 15px rgba(0,255,136,0.35), 0 0 40px rgba(0,255,136,0.15);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+  color:var(--ink);
+  background: radial-gradient(1000px 600px at 20% -10%, rgba(0,255,136,0.08), transparent),
+              radial-gradient(1200px 700px at 100% 0, rgba(0,255,136,0.07), transparent),
+              var(--bg);
+  letter-spacing:0.2px;
+}
+
+.container{
+  max-width:980px;
+  margin:0 auto;
+  padding:24px;
+}
+
+.header{
+  text-align:center;
+  margin-bottom:20px;
+}
+.header h1{
+  margin:10px 0 4px;
+  font-size:clamp(28px,5vw,40px);
+  text-shadow: var(--glow);
+}
+.tag{
+  color:var(--muted);
+  opacity:0.9;
+}
+
+.card{
+  background: linear-gradient(180deg, rgba(0,255,136,0.05), rgba(0,0,0,0.3));
+  border:1px solid rgba(0,255,136,0.2);
+  border-radius:16px;
+  padding:20px;
+  box-shadow: var(--glow);
+  margin:16px 0;
+}
+.card.slim{padding:12px}
+
+.field{margin:12px 0}
+label{display:block;margin-bottom:6px;color:var(--muted)}
+input[type="text"],input[type="date"],textarea{
+  width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(0,255,136,0.25);
+  background:#020302; color:var(--ink); outline:none;
+}
+textarea{min-height:96px;resize:vertical}
+
+.btn{
+  appearance:none; border:1px solid var(--neon); color:#04120b;
+  background:linear-gradient(180deg, var(--neon), #54ffbb);
+  padding:10px 16px; border-radius:12px; cursor:pointer; font-weight:700; margin-right:8px;
+  box-shadow: var(--glow);
+}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{
+  background:transparent; color:var(--neon); border-color:rgba(0,255,136,0.4);
+}
+
+.hint{color:var(--muted);font-size:0.95rem;opacity:0.9}
+
+.hidden{display:none}
+
+.result-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.meta{color:var(--muted)}
+.meta-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.pill{
+  border:1px solid rgba(0,255,136,0.35); padding:6px 10px; border-radius:999px; color:var(--neon);
+  box-shadow: var(--glow); font-size:0.9rem;
+}
+
+.grid{
+  display:grid; grid-template-columns: minmax(0,1fr) 320px; gap:24px;
+}
+@media (max-width: 860px){
+  .grid{grid-template-columns: 1fr}
+}
+
+blockquote{
+  margin:0; padding:12px 14px; border-left:3px solid var(--neon); background:#030804; border-radius:8px;
+}
+
+.sigil{
+  font-family: "Courier New", ui-monospace, monospace;
+  letter-spacing:2px; font-size:1.1rem;
+}
+
+.footer{
+  margin-top:16px; text-align:center; color:var(--muted);
+}
+
+.actions{margin-top:12px}
+ul{margin:8px 0 0 20px}

@@ -2,113 +2,295 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spirit Guide App</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: 'Georgia', serif;
-      color: #00ffcc;
-      background: black;
-      overflow: hidden;
-    }
-    canvas#matrix {
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
-    .app {
-      position: relative;
-      z-index: 1;
-      padding: 2rem;
-      max-width: 600px;
-      margin: auto;
-      text-align: center;
-    }
-    input, button {
-      padding: 0.7rem;
-      font-size: 1rem;
-      margin: 0.5rem;
-      border-radius: 5px;
-      border: none;
-    }
-    button {
-      background-color: #00ffcc;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 2rem;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 1rem;
-      border-radius: 8px;
-      white-space: pre-wrap;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spirit Guide App — 7 Tarot</title>
+  <link rel="stylesheet" href="style.css"/>
+  <meta name="theme-color" content="#00ff88"/>
 </head>
 <body>
-  <canvas id="matrix"></canvas>
-  <div class="app">
-    <h1>🧙‍♂️ Spirit Guide Generator</h1>
-    <input type="text" id="name" placeholder="Enter your name" />
-    <input type="date" id="dob" />
-    <button onclick="generateGuide()">Calculate</button>
-    <div id="result"></div>
-  </div>
+  <main class="container">
+    <header class="header">
+      <h1>Spirit Guide App</h1>
+      <p class="tag">Deterministic • Private • Offline‑ready</p>
+    </header>
+
+    <section id="formSection" class="card">
+      <h2>Tell us about you</h2>
+      <form id="guideForm">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" placeholder="Your full name" required/>
+        </div>
+        <div class="field">
+          <label for="dob">Birth date</label>
+          <input type="date" id="dob" required/>
+        </div>
+        <div class="field">
+          <label for="intent">Question / Intent (optional)</label>
+          <textarea id="intent" placeholder="What do you want guidance on?"></textarea>
+        </div>
+        <button class="btn" type="submit">Calculate</button>
+        <button class="btn ghost" type="button" id="demoBtn" title="Loads a friendly demo">Demo</button>
+      </form>
+      <p class="hint">
+        This selection is <strong>deterministic</strong>: the same name + birth date will always map to the same guide.
+        Your result is saved in your browser only (localStorage). 🗝️
+      </p>
+    </section>
+
+    <section id="resultSection" class="card hidden">
+      <div class="result-head">
+        <div>
+          <h2 id="guideName"></h2>
+          <p id="guideMeta" class="meta"></p>
+        </div>
+        <div class="meta-right">
+          <p id="lifePath" class="pill"></p>
+          <p id="seedOut" class="pill"></p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <h3>Backstory</h3>
+          <p id="backstory"></p>
+        </div>
+        <aside>
+          <h3>Keywords</h3>
+          <ul id="keywords"></ul>
+
+          <h3>Mantra</h3>
+          <blockquote id="mantra"></blockquote>
+
+          <h3>Sigil</h3>
+          <p id="sigil" class="sigil"></p>
+        </aside>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="copyBtn">Copy summary</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
+      </div>
+
+      <details class="card slim">
+        <summary>What makes this deterministic?</summary>
+        <p>We hash your <em>Name</em> + <em>Birth date</em> into a stable number using a DJB2‑style hash, then map that to the guide list. We also calculate your Life Path number to slightly shift the selection, in a predictable way.</p>
+      </details>
+    </section>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> 7 Tarot • Works offline once loaded • No data leaves your browser.</small>
+    </footer>
+  </main>
 
   <script>
-    const canvas = document.getElementById('matrix');
-    const ctx = canvas.getContext('2d');
-    canvas.height = window.innerHeight;
-    canvas.width = window.innerWidth;
-    const chars = "アァカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-    const fontSize = 14;
-    const columns = canvas.width / fontSize;
-    const drops = Array(Math.floor(columns)).fill(1);
-    function drawMatrix() {
-      ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#00ffcc";
-      ctx.font = fontSize + "px monospace";
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars[Math.floor(Math.random() * chars.length)];
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0;
-        }
-        drops[i]++;
+    // ---- Utilities ----
+    function djb2Hash(str) {
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) + h) ^ str.charCodeAt(i); // h * 33 ^ c
       }
+      return h >>> 0; // unsigned
     }
-    setInterval(drawMatrix, 33);
 
-    async function generateGuide() {
-      const name = document.getElementById('name').value.trim().toLowerCase();
-      const dob = document.getElementById('dob').value;
-      console.log("Calculate clicked. Name:", name, "DOB:", dob);
-      if (!name || !dob) {
-        alert('Please enter your name and date of birth');
-        return;
+    function digitSum(n) {
+      return n.toString().split('').reduce((a,b)=>a + (+b), 0);
+    }
+
+    function reduceLifePath(yyyymmdd) {
+      // Preserve 11/22/33 as master numbers
+      let n = yyyymmdd.toString().split('').reduce((a,b)=>a+(+b),0);
+      while (![11,22,33].includes(n) && n > 9) {
+        n = digitSum(n);
       }
+      return n;
+    }
+
+    function pad2(n){ return n<10?'0'+n:n; }
+
+    function toYMD(dobStr){
+      // dobStr expected as YYYY-MM-DD
+      const d = new Date(dobStr);
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth()+1);
+      const dd = pad2(d.getDate());
+      return `${y}${m}${dd}`;
+    }
+
+    function pickGuide(guides, name, dob) {
+      const ymd = toYMD(dob);
+      const life = reduceLifePath(ymd);
+      const seed = djb2Hash((name||'') + '|' + ymd);
+      // Stable blend: index = (seed + life) % guides.length
+      const idx = (seed + life) % guides.length;
+      return { idx, life, seed };
+    }
+
+    function setText(id, text){ document.getElementById(id).textContent = text; }
+    function byId(id){ return document.getElementById(id); }
+    function show(el){ el.classList.remove('hidden'); }
+    function hide(el){ el.classList.add('hidden'); }
+
+    // ---- App State ----
+    const LS_KEY = "spiritGuideResult_v2";
+
+    async function loadGuides() {
+      // Try fetching JSON first (best for deployed use), fallback to inline data if necessary
       try {
-        const response = await fetch('backstories_full_fixed.json');
-        const backstories = await response.json();
-        console.log("Backstories loaded:", backstories);
-        const total = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + new Date(dob).getTime();
-        const keys = Object.keys(backstories);
-        const guideKey = keys[total % keys.length];
-        console.log("Selected guide key:", guideKey);
-        const guideName = guideKey.charAt(0).toUpperCase() + guideKey.slice(1);
-        const story = backstories[guideKey];
-        document.getElementById('result').innerText = `🕊️ Your Spirit Guide's Name is: ${guideName}\n\n${story}`;
-      } catch (err) {
-        console.error("Something went wrong fetching or parsing the guide:", err);
-        alert("Sorry — something went wrong loading your spirit guide.");
+        const res = await fetch('backstories_full_fixed.json', {cache: 'no-store'});
+        if (!res.ok) throw new Error('Fetch failed');
+        const data = await res.json();
+        return data.guides || data;
+      } catch (e) {
+        console.warn('Falling back to inline guides due to fetch error:', e);
+        const inline = document.getElementById('inline-guides-json');
+        if (inline) {
+          try { return JSON.parse(inline.textContent).guides; }
+          catch(_) { /* ignore */ }
+        }
+        throw new Error('No guide data available.');
       }
     }
+
+    function lifePathLabel(n){
+      return (n===11||n===22||n===33) ? `Life Path ${n} (Master)` : `Life Path ${n}`;
+    }
+
+    function renderResult(user, guide, idx, life, seed) {
+      setText('guideName', guide.name);
+      setText('guideMeta', `${guide.element} • ${guide.domains.join(' • ')}`);
+      setText('lifePath', lifePathLabel(life));
+      setText('seedOut', `Seed ${seed}`);
+      setText('backstory', guide.backstory);
+      setText('sigil', guide.sigil || '—');
+      const kw = byId('keywords');
+      kw.innerHTML = '';
+      (guide.keywords || []).forEach(k => {
+        const li = document.createElement('li');
+        li.textContent = k;
+        kw.appendChild(li);
+      });
+      show(byId('resultSection'));
+      hide(byId('formSection'));
+    }
+
+    function saveResult(payload){
+      localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    }
+
+    function loadSaved(){
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+
+    function copySummary(){
+      const name = byId('guideName').textContent;
+      const meta = byId('guideMeta').textContent;
+      const life = byId('lifePath').textContent;
+      const seed = byId('seedOut').textContent;
+      const kw = [...document.querySelectorAll('#keywords li')].map(li=>li.textContent).join(', ');
+      const mantra = byId('mantra').textContent;
+      const back = byId('backstory').textContent;
+      const txt = `${name}\n${meta}\n${life} • ${seed}\n\nKeywords: ${kw}\n\nMantra:\n${mantra}\n\nBackstory:\n${back}`;
+      navigator.clipboard.writeText(txt).then(()=>{
+        alert('Copied your Spirit Guide summary to clipboard.');
+      }).catch(()=>{
+        alert('Could not copy automatically. Please select text and copy.');
+      });
+    }
+
+    // ---- Boot ----
+    (async function(){
+      document.getElementById('year').textContent = new Date().getFullYear();
+      const guides = await loadGuides();
+
+      const saved = loadSaved();
+      if (saved && saved.selectedId) {
+        const guide = guides.find(g => g.id === saved.selectedId);
+        if (guide) {
+          renderResult(saved.user, guide, saved.index, saved.life, saved.seed);
+        }
+      }
+
+      // Form
+      const form = byId('guideForm');
+      form.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const name = byId('name').value.trim();
+        const dob  = byId('dob').value;
+        const intent = byId('intent').value.trim();
+
+        if (!name || !dob) return;
+
+        const { idx, life, seed } = pickGuide(guides, name, dob);
+        const guide = guides[idx];
+        renderResult({name, dob, intent}, guide, idx, life, seed);
+        saveResult({
+          user: {name, dob, intent},
+          index: idx,
+          life,
+          seed,
+          selectedId: guide.id,
+          when: new Date().toISOString()
+        });
+      });
+
+      // Demo loader (uses a stable internal demo seed)
+      byId('demoBtn').addEventListener('click', ()=>{
+        byId('name').value = 'Demo User';
+        byId('dob').value = '1990-08-17';
+        byId('intent').value = 'Show me how this works.';
+      });
+
+      // Reset
+      byId('resetBtn').addEventListener('click', ()=>{
+        localStorage.removeItem(LS_KEY);
+        hide(byId('resultSection'));
+        show(byId('formSection'));
+      });
+
+      // Copy
+      byId('copyBtn').addEventListener('click', copySummary);
+
+      // Put mantra (some guides may not have, we add safe default)
+      const mantraEl = byId('mantra');
+      const observer = new MutationObserver(()=>{
+        const gname = byId('guideName').textContent;
+        const found = guides.find(g=>g.name===gname);
+        mantraEl.textContent = (found && found.mantra) ? found.mantra : "I align with my guide's wisdom and act with clarity.";
+      });
+      observer.observe(byId('guideName'), {childList:true});
+    })();
+  </script>
+
+  <!-- Optional inline fallback with two tiny guides to prove the UI when opened as file://
+       For full data, deploy with backstories_full_fixed.json in the same folder. -->
+  <script id="inline-guides-json" type="application/json">
+  {
+    "guides":[
+      {
+        "id":"zoriel",
+        "name":"Zoriel",
+        "element":"Fire",
+        "domains":["Leadership","Confidence","Trailblazing"],
+        "keywords":["ignite","direction","courage","momentum","clarity"],
+        "sigil":"⟡⟠⟡",
+        "mantra":"I move first, with warmth and wisdom.",
+        "backstory":"Inline fallback preview only. Please deploy with backstories_full_fixed.json for the full 12‑guide library."
+      },
+      {
+        "id":"nymera",
+        "name":"Nymera",
+        "element":"Water",
+        "domains":["Intuition","Compassion","Dreaming"],
+        "keywords":["listen","soothe","merge","feel","heal"],
+        "sigil":"≈✶≈",
+        "mantra":"I trust the quiet tides within.",
+        "backstory":"Inline fallback preview only. Please deploy with backstories_full_fixed.json for the full 12‑guide library."
+      }
+    ]
+  }
   </script>
 </body>
 </html>
