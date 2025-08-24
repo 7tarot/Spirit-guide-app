@@ -1,0 +1,34 @@
+{
+  "guides": [
+    {
+      "id": "aurora-dawnweaver",
+      "name": "Aurora Dawnweaver",
+      "element": "Air",
+      "domains": ["Insight", "Clarity", "New Beginnings"],
+      "backstory": "Aurora Dawnweaver steps where first light gathers—on the knife-edge between night and day. In life she was a cartographer of winds, a scribe of whispers, and a gentle disrupter of stale habits. She learned that truths arrive like birds: some land easily on the hand; others require patient stillness. When you meet Aurora, she will ask you what you already know but haven’t named. She threads your thoughts into a sky-map, turning doubts into direction. Her lessons are soft but exact: breathe, listen, choose. She stirs curiosity, invites courageous first steps, and places a luminous marker on your horizon so you can keep moving when fog tries to fold in. Her mantra: “Begin where the air brightens.”",
+      "mantra": "Begin where the air brightens.",
+      "keywords": ["clarity", "dawn", "decision", "first step", "breath"],
+      "sigil": "A-∴-DW"
+    },
+    {
+      "id": "marrow-of-embers",
+      "name": "Marrow of Embers",
+      "element": "Fire",
+      "domains": ["Courage", "Transmutation", "Vitality"],
+      "backstory": "Marrow of Embers carries a coal from the first hearth. In life they tended the long fire in the hall, keeping company with travelers, smiths, and storytellers. They understand the chemistry of change: the way fear chars on the surface while the core turns sweet. When you call Marrow, your spine remembers it is a blade, your voice warms, and the future feels cookable. They teach you to feed small sticks first, then logs, to respect the rhythm of heat and rest. They remind you that ash is not an ending but fertile ground. Their presence crackles in your bones when it is time to speak, to defend, or to dare. Their mantra: “Fire is a form of focus.”",
+      "mantra": "Fire is a form of focus.",
+      "keywords": ["courage", "heat", "alchemy", "voice", "renewal"],
+      "sigil": "M∴E"
+    },
+    {
+      "id": "tideline-keeper",
+      "name": "Tideline Keeper",
+      "element": "Water",
+      "domains": ["Emotion", "Healing", "Cycles"],
+      "backstory": "At the seam where sea keeps secrets and shore keeps stories, the Tideline Keeper counts breaths. Once a midwife and a mourner, they learned tides by touch: how to hold, release, and hold again. Their counsel arrives like waves—steady, cleansing, precise. They help you translate feelings into currents you can navigate. They teach boundaries as shore teaches cliff: firm but not unkind. With them, you remember that grief is only love with nowhere to go yet. Their gift is the return: to your body, to your rhythm, to the next safe harbor. Their mantra: “Let what comes, come; let what goes, go; let what stays, stay.”",
+      "mantra": "Let what comes, come; let what goes, go; let what stays, stay.",
+      "keywords": ["tides", "grief", "soothing", "release", "return"],
+      "sigil": "TK~"
+    }
+  ]
+}
