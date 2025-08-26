@@ -1,20 +1,22 @@
-SPIRIT GUIDE APP — NUMEROLOGY EDITION (v2.4)
-=============================================
+Spirit Guide App — v2.6 (Name Resonance)
 
-NEW: Tweakable Connections Rules
---------------------------------
-• Preset selector in the "Connections" card:
-  - Classic (v2.3): Soulmate PY 2/6, Karmic PY 7/9 (+ debt roots), Twin PY 1/2/6 (+ core roots)
-  - Steve's House: adds **PY 3** to Soulmate; other rules as above
-• Live recalculation when you switch presets (no retyping).
+How to run locally
+1) Put your audio file inside the ambient/ folder and rename it exactly: binaural.mp3
+2) Double-click index.html to open it in your browser.
+3) Click Demo (or enter your details) → the Results card appears.
+4) Under “Backstory”, use the Ambient dropdown → choose Ambient: Mystic Rain.
 
-Still includes:
-• Deterministic guide mapping (normalised name + DOB + full chart)
-• Full numerology chart + meanings + **compatibility + Tarot + zodiac** (in the expandable panel)
-• Calm UK female narration by default, with voice/speed controls
-• Private localStorage cache
+If audio is silent at first, click anywhere on the page once, then choose Mystic Rain again (browser audio rule).
 
-Run locally:
-  python -m http.server 8080  → http://localhost:8080/
+Optional: ambient_test.html
+- Double-click ambient_test.html and pick Ambient: Mystic Rain to confirm the MP3 plays.
 
-© 2025 7 Tarot
+GitHub Pages upload
+1) In your repo → Add file → Upload files.
+2) Drag in:
+   - index.html
+   - style.css
+   - backstories_full_fixed.json
+   - ambient/ (the folder with binaural.mp3 inside)
+3) Settings → Pages → Build from branch → main / (root).
+4) Open your site URL (add ?v=2 to refresh cache).
