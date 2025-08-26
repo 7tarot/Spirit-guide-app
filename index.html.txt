@@ -29,6 +29,7 @@
         <button class="btn" type="submit">Calculate</button>
         <button class="btn ghost" type="button" id="demoBtn">Demo</button>
       </form>
+      <p class="hint">Works offline • Your data stays in your browser.</p>
     </section>
 
     <!-- RESULTS -->
@@ -49,22 +50,22 @@
           <h3>Backstory</h3>
           <p id="backstory"></p>
 
-          <!-- Narration -->
-          <div class="actions">
+          <!-- Narration controls -->
+          <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <button class="btn" id="speakBtn">🔈 Narrate</button>
             <button class="btn ghost" id="stopSpeakBtn">Stop</button>
-            <select id="voiceSel"></select>
-            <select id="moodSel">
+            <select id="voiceSel" class="picker"></select>
+            <select id="moodSel" class="picker">
               <option value="soothing" selected>Soothing</option>
               <option value="mysterious">Mysterious</option>
               <option value="empowering">Empowering</option>
             </select>
-            <input id="rateSel" type="range" min="0.6" max="1.1" step="0.05" value="0.85"/>
+            <input id="rateSel" type="range" min="0.6" max="1.1" step="0.05" value="0.85" title="Voice speed"/>
           </div>
 
-          <!-- Ambient -->
-          <div class="actions">
-            <select id="ambSel">
+          <!-- ✅ Ambient Soundscapes (always present here) -->
+          <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <select id="ambSel" class="picker">
               <option value="none" selected>Ambient: Off</option>
               <option value="rain">Ambient: Mystic Rain</option>
               <option value="choir">Ambient: Celestial Choir</option>
@@ -84,21 +85,27 @@
         </aside>
       </div>
 
-      <!-- Chart + Connections -->
+      <!-- Chart -->
       <section class="card">
         <h3>Your Numerology Chart</h3>
-        <div id="chartGrid"></div>
+        <div id="chartGrid" class="num-grid"></div>
+        <details style="margin-top:10px;">
+          <summary>What do these mean? (compatibility, Tarot & zodiac)</summary>
+          <div id="chartExplain"></div>
+        </details>
       </section>
 
+      <!-- Connections -->
       <section class="card">
         <h3>Connections (Soulmate • Karmic • Twin)</h3>
         <div id="connections"></div>
       </section>
 
       <div class="actions">
-        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
       </div>
 
+      <!-- ✅ audio element for ambient -->
       <audio id="ambAudio" loop></audio>
     </section>
 
@@ -108,11 +115,11 @@
   </main>
 
   <script>
-    // Ambient soundscapes
+    /******** Ambient soundscapes ********/
     const AMBIENT = {
-      rain:  "ambient/binaural.mp3",
-      choir: "ambient/choir.mp3",
-      drone: "ambient/drone.mp3"
+      rain:  "ambient/binaural.mp3", // put your file here with this exact name
+      choir: "ambient/choir.mp3",    // optional later
+      drone: "ambient/drone.mp3"     // optional later
     };
     function setAmbient(key){
       const audio = document.getElementById('ambAudio');
@@ -121,98 +128,156 @@
       if (!src){ audio.pause(); audio.removeAttribute('src'); return; }
       audio.src = src;
       audio.volume = 0.35;
-      audio.play().catch(()=>{});
+      audio.play().catch(()=>{}); // some browsers need a user click first
     }
+    // hook up Ambient UI
+    window.addEventListener('DOMContentLoaded', ()=>{
+      document.getElementById('ambSel')?.addEventListener('change', e=> setAmbient(e.target.value));
+      document.getElementById('ambStopBtn')?.addEventListener('click', ()=> setAmbient('none'));
+    });
 
-    // Simple numerology calc
+    /******** Numerology helpers (light version) ********/
     function digitSum(n){ return n.toString().split('').reduce((a,b)=>a+(+b),0); }
     function reduceNum(n){ while(n>9){ n = digitSum(n); } return n; }
     function numForDate(d){ return reduceNum(digitSum(d.getFullYear())+digitSum(d.getMonth()+1)+digitSum(d.getDate())); }
 
-    // Load voices
+    /******** Speech ********/
     let VOICES=[];
     function loadVoices(){
+      if(!('speechSynthesis' in window)) return;
       VOICES = window.speechSynthesis.getVoices();
       const sel=document.getElementById('voiceSel'); sel.innerHTML='';
-      VOICES.forEach((v,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=v.name; sel.appendChild(o); });
+      VOICES.forEach((v,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=`${v.name} (${v.lang})`; sel.appendChild(o); });
+      // pick a calm UK female if available
+      const preferred=['Microsoft Sonia Online (Natural) - English (United Kingdom)','Microsoft Libby Online (Natural) - English (United Kingdom)','Google UK English Female','Microsoft Hazel Desktop - English (Great Britain)'];
+      let idx = VOICES.findIndex(v=>preferred.includes(v.name));
+      if (idx===-1) idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang) && /female/i.test(v.name));
+      if (idx===-1) idx = VOICES.findIndex(v=>/en-GB/i.test(v.lang));
+      if (idx<0) idx = 0;
+      sel.selectedIndex = Math.max(0, idx);
     }
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-
+    if ('speechSynthesis' in window){
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      setTimeout(loadVoices, 200);
+    }
+    function moodSettings(mood){
+      if (mood==='mysterious') return {rate:0.8, pitch:0.9};
+      if (mood==='empowering') return {rate:0.95, pitch:1.05};
+      return {rate:0.85, pitch:1.0};
+    }
     function speakText(text){
+      if (!('speechSynthesis' in window)) { alert('Speech not supported here.'); return; }
       window.speechSynthesis.cancel();
       const u=new SpeechSynthesisUtterance(text);
-      const sel=document.getElementById('voiceSel');
-      u.voice = VOICES[sel.value]||null;
-      u.rate=parseFloat(document.getElementById('rateSel').value);
+      const voiceIdx = +document.getElementById('voiceSel').value || 0;
+      if (VOICES[voiceIdx]) u.voice = VOICES[voiceIdx];
+      const mood = moodSettings(document.getElementById('moodSel').value);
+      const rate = parseFloat(document.getElementById('rateSel').value)||mood.rate;
+      u.rate = rate; u.pitch = mood.pitch; u.volume = 1.0;
       window.speechSynthesis.speak(u);
     }
 
-    // Load guides with fallback
+    /******** Load guides with a safe fallback ********/
     async function loadGuides(){
       try {
-        const res = await fetch('backstories_full_fixed.json');
-        if(res.ok){ const data=await res.json(); return data.guides||data; }
+        const res = await fetch('backstories_full_fixed.json', {cache:'no-store'});
+        if (res.ok){
+          const data = await res.json();
+          const arr = data.guides || data;
+          if (Array.isArray(arr) && arr.length) return arr;
+        }
       } catch(e){}
+      // fallback guide so the app always works
       return [{
-        id:"fallback",
-        name:"Aurora Dawnweaver",
-        element:"Air",
-        domains:["Insight","Clarity"],
-        backstory:"This is a fallback guide. Replace with your real backstories later.",
-        mantra:"I align with clarity.",
-        keywords:["clarity","dawn","decision"],
-        sigil:"A-∴-DW"
+        id:"mireth",
+        name:"Mireth",
+        element:"Forest",
+        domains:["Growth","Patience","Tending"],
+        backstory:"Mireth walks with dirt under their nails and a calendar of seed catalogues in their head. In cloisters built of cedar, they trained gardeners who could read a year by the smell of the soil. If Mireth visits you, life is asking for stewardship, not spectacle. Start where you are soft: water the plant, sort the drawer, reply to the kindest email first. Growth, they insist, is mostly chores performed with respect. Mireth’s patience is not passive. It is attentive. They will teach you to prune what steals light—old obligations, tired self-images, commitments that once were kind but now are cages. Under their care, you’ll notice how many miracles happen at countertop height: bread rising, glue drying, ideas sprouting while you wash a bowl. You will learn to track your seasons and trust them. Winter is for roots. Spring is for experiments. Summer is for stamina. Autumn is for thanks and editing. With Mireth, you will become a student of maintenance as devotion. Your future wants to be fed. Put habits where your hands already go. Keep your tools visible and your expectations humane. Praising small progress will feel like rain. In a year, people will ask how you got so lucky. You’ll smile and point to the watering can.",
+        mantra:"I tend the small so the great can grow.",
+        keywords:["seed","tend","prune","root","harvest"],
+        sigil:"✿"
       }];
     }
 
-    // App
+    /******** Render helpers ********/
+    function setText(id, t){ document.getElementById(id).textContent = t; }
+    function renderChart(lifePath){
+      const NUM = {
+        1:"Leadership, initiative, independence.",
+        2:"Cooperation, diplomacy, sensitivity.",
+        3:"Creativity, expression, joy.",
+        4:"Stability, systems, diligence.",
+        5:"Change, freedom, adventure.",
+        6:"Care, responsibility, harmony.",
+        7:"Analysis, mysticism, depth.",
+        8:"Power, material mastery, authority.",
+        9:"Compassion, service, completion."
+      };
+      const grid = document.getElementById('chartGrid');
+      grid.innerHTML = `
+        <div class="num-row"><div class="num-label">Life Path</div><div class="num-val">${lifePath}</div><div class="num-mean">${NUM[lifePath]||''}</div></div>
+      `;
+      document.getElementById('chartExplain').innerHTML = `
+        <h4>Life Path: ${lifePath}</h4>
+        <p><em>${NUM[lifePath]||''}</em></p>
+      `;
+    }
+
+    /******** App boot ********/
     (async function(){
       document.getElementById('year').textContent = new Date().getFullYear();
       const GUIDES = await loadGuides();
 
+      // form submit
       document.getElementById('guideForm').addEventListener('submit', (e)=>{
         e.preventDefault();
-        const name=document.getElementById('name').value;
+        const name=document.getElementById('name').value.trim();
         const dob=document.getElementById('dob').value;
         if(!name||!dob) return;
         const d=new Date(dob);
-        const lifePath=numForDate(d);
+        const lifePath = (function(){
+          const y = digitSum(d.getFullYear()), m = digitSum(d.getMonth()+1), day = digitSum(d.getDate());
+          return reduceNum(y+m+day);
+        })();
 
-        const seed = (name+dob).length % GUIDES.length;
+        // deterministic pick (simple for demo)
+        const seed = (name.toUpperCase().replace(/\s+/g,'') + '|' + dob).length % GUIDES.length;
         const g = GUIDES[seed];
 
-        document.getElementById('guideName').textContent=g.name;
-        document.getElementById('guideMeta').textContent=`${g.element} • ${g.domains.join(' • ')}`;
-        document.getElementById('lifePath').textContent=`Life Path ${lifePath}`;
-        document.getElementById('seedOut').textContent=`Seed ${seed}`;
-        document.getElementById('backstory').textContent=g.backstory;
-        document.getElementById('mantra').textContent=g.mantra;
-        document.getElementById('keywords').innerHTML=g.keywords.map(k=>`<li>${k}</li>`).join('');
-        document.getElementById('sigilBox').textContent=g.sigil;
+        setText('guideName', g.name);
+        setText('guideMeta', `${g.element} • ${g.domains.join(' • ')}`);
+        setText('lifePath', `Life Path ${lifePath}`);
+        setText('seedOut', `Seed ${seed}`);
+        setText('backstory', g.backstory);
+        setText('mantra', g.mantra);
+        document.getElementById('keywords').innerHTML = (g.keywords||[]).map(k=>`<li>${k}</li>`).join('');
+        document.getElementById('sigilBox').textContent = g.sigil || '—';
+
+        renderChart(lifePath);
+
+        // simple connections text placeholder
+        document.getElementById('connections').innerHTML = `<p class="hint">Cycles repeat every 9 years. Use Personal Year timing as guidance, not fate.</p>`;
 
         document.getElementById('formSection').classList.add('hidden');
         document.getElementById('resultSection').classList.remove('hidden');
       });
 
-      // Demo button
+      // Demo
       document.getElementById('demoBtn').addEventListener('click', ()=>{
         document.getElementById('name').value="Demo User";
         document.getElementById('dob').value="1990-08-17";
       });
 
       // Reset
-      document.getElementById('resetBtn').addEventListener('click', ()=>location.reload());
+      document.getElementById('resetBtn').addEventListener('click', ()=> location.reload());
 
       // Narration
       document.getElementById('speakBtn').addEventListener('click', ()=>{
         const txt=document.getElementById('backstory').textContent;
         speakText(txt);
       });
-      document.getElementById('stopSpeakBtn').addEventListener('click', ()=>window.speechSynthesis.cancel());
-
-      // Ambient
-      document.getElementById('ambSel').addEventListener('change', e=>setAmbient(e.target.value));
-      document.getElementById('ambStopBtn').addEventListener('click', ()=>setAmbient('none'));
+      document.getElementById('stopSpeakBtn').addEventListener('click', ()=> window.speechSynthesis?.cancel());
     })();
   </script>
 </body>
