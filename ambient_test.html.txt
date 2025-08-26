@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ambient Tester</title>
+<style>
+  body{background:#000;color:#0f8; font:16px system-ui; display:grid; place-items:center; height:100vh; margin:0}
+  .card{border:1px solid #0f8; padding:24px; border-radius:12px; box-shadow:0 0 18px #0f84}
+  select,button{background:#001b12;color:#0f8;border:1px solid #0f8;padding:8px;border-radius:8px}
+</style>
+<div class="card">
+  <h2>Ambient Test</h2>
+  <p>If you hear music, the MP3/path are OK.</p>
+  <p>
+    <select id="sel">
+      <option value="">Ambient: Off</option>
+      <option value="ambient/binaural.mp3">Ambient: Mystic Rain</option>
+    </select>
+    <button id="stop">Stop</button>
+  </p>
+  <audio id="a" loop></audio>
+  <p><small>Tip: if silent, click once anywhere, then choose Mystic Rain again.</small></p>
+</div>
+<script>
+  const a = document.getElementById('a');
+  document.getElementById('sel').addEventListener('change', e=>{
+    a.pause(); a.removeAttribute('src');
+    if(!e.target.value) return;
+    a.src = e.target.value; a.volume = 0.35;
+    a.play().catch(()=>{});
+  });
+  document.getElementById('stop').onclick=()=>{ a.pause(); a.removeAttribute('src'); };
+</script>
